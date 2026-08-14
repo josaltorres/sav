@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Camino Financiero — Terminal de Simulación</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --canvas:#08090b;--s1:#0d0f12;--s2:#121519;--s3:#171b21;
+  --line:rgba(255,255,255,.07);--line-s:rgba(255,255,255,.14);
+  --txt:#e6e7e9;--dim:#767a83;--dimmer:#4a4e56;
+  --acid:#ccff02;--up:#3ddc97;--down:#ff4d5e;--warn:#ffaa33;--info:#5b8def;--alt:#b06cff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:var(--canvas);}
+body{color:var(--txt);font-family:'Space Grotesk',sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.014) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.014) 1px,transparent 1px);
+  background-size:64px 64px;}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+.micro{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);}
+.screen{display:none;position:relative;z-index:1;}
+#screen-intro.active{display:block;}
+#screen-game.active{display:flex;flex-direction:column;height:100vh;}
+#screen-results.active{display:block;}
+
+.masthead{display:flex;align-items:center;gap:20px;border-bottom:1px solid var(--line);padding:11px 24px;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);}
+.mh-mark{color:var(--acid);font-weight:600;}
+.mh-sep{color:var(--dimmer);}
+.mh-right{margin-left:auto;display:flex;gap:18px;}
+.live-dot{display:inline-block;width:5px;height:5px;background:var(--acid);border-radius:50%;margin-right:6px;animation:blink 1.8s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* INTRO */
+.intro-hero{padding:76px 24px 56px;max-width:1080px;margin:0 auto;}
+.hero-tag{display:flex;align-items:center;gap:10px;margin-bottom:26px;}
+.hero-tag .rule{flex:1;height:1px;background:var(--line);}
+h1.hero{font-size:clamp(2.5rem,7vw,5.2rem);font-weight:500;line-height:.94;letter-spacing:-.035em;margin-bottom:22px;}
+h1.hero .lo{color:var(--dimmer);}
+h1.hero .hi{color:var(--acid);}
+.hero-lead{font-size:14.5px;color:var(--dim);line-height:1.75;max-width:540px;margin-bottom:44px;}
+.termsheet{border-top:1px solid var(--line-s);margin-bottom:48px;}
+.ts-row{display:grid;grid-template-columns:200px 1fr auto;gap:20px;padding:13px 0;border-bottom:1px solid var(--line);align-items:baseline;}
+.ts-key{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);}
+.ts-val{font-size:13.5px;color:var(--txt);}
+.ts-num{font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--acid);font-variant-numeric:tabular-nums;}
+.mod-grid{border-top:1px solid var(--line-s);margin-bottom:52px;}
+.mod-row{display:grid;grid-template-columns:56px 230px 1fr;gap:22px;padding:20px 0;border-bottom:1px solid var(--line);align-items:start;}
+.mod-idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dimmer);letter-spacing:.1em;}
+.mod-name{font-size:15.5px;font-weight:500;letter-spacing:-.01em;}
+.mod-name .bar{display:block;width:26px;height:2px;margin-top:9px;}
+.mod-name .tagm{display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--dimmer);margin-top:7px;text-transform:uppercase;}
+.mod-desc{font-size:13px;color:var(--dim);line-height:1.7;}
+.cta-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap;}
+.btn-primary{background:var(--acid);color:#0a0d00;border:none;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;padding:16px 40px;cursor:pointer;transition:.18s;}
+.btn-primary:hover{background:#dcff3f;transform:translateY(-1px);}
+.cta-note{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--dimmer);text-transform:uppercase;}
+
+/* GAME */
+.g-body{flex:1;display:grid;grid-template-columns:242px 1fr 272px;overflow:hidden;}
+.col{overflow-y:auto;}
+.col::-webkit-scrollbar{width:6px;}
+.col::-webkit-scrollbar-thumb{background:var(--line-s);}
+.col-l{border-right:1px solid var(--line);padding:18px 16px;}
+.col-c{padding:22px 26px;display:flex;flex-direction:column;gap:16px;}
+.col-r{border-left:1px solid var(--line);padding:18px 16px;display:flex;flex-direction:column;gap:18px;}
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.sec-head .rule{flex:1;height:1px;background:var(--line);}
+.tstrip{display:flex;gap:2px;align-items:center;flex:1;max-width:400px;}
+.tseg{flex:1;height:3px;background:rgba(255,255,255,.08);transition:.3s;}
+.tseg.done{background:var(--dimmer);}
+.tseg.now{background:var(--acid);}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;}
+.node{aspect-ratio:1;border:1px solid var(--line);background:var(--s1);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;position:relative;transition:.2s;}
+.node .nidx{position:absolute;top:2px;left:4px;font-family:'IBM Plex Mono',monospace;font-size:7px;color:var(--dimmer);}
+.node .ncode{font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.03em;}
+.node .nbar{position:absolute;bottom:0;left:0;right:0;height:2px;}
+.node.here{border-color:var(--acid);background:rgba(204,255,2,.06);}
+.node.here .ncode{color:var(--acid);}
+.node.here::after{content:'';position:absolute;top:2px;right:3px;width:4px;height:4px;background:var(--acid);border-radius:50%;animation:blink 1.4s infinite;}
+.key-list{margin-top:16px;display:flex;flex-direction:column;gap:7px;}
+.key-item{display:flex;align-items:center;gap:9px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--dim);}
+.key-swatch{width:14px;height:2px;flex-shrink:0;}
+.key-auto{margin-left:auto;font-size:8px;color:var(--dimmer);}
+
+.node-panel{border:1px solid var(--line);background:var(--s1);padding:24px 26px;position:relative;}
+.node-panel::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--np-color,var(--dimmer));}
+.np-top{display:flex;align-items:baseline;gap:14px;margin-bottom:12px;}
+.np-code{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:var(--np-color,var(--txt));}
+.np-cat{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);}
+.np-name{font-size:20px;font-weight:500;letter-spacing:-.015em;margin-bottom:8px;}
+.np-desc{font-size:13px;color:var(--dim);line-height:1.7;max-width:470px;}
+
+.dice-mod{border:1px solid var(--line);background:var(--s1);padding:22px;display:flex;align-items:center;gap:24px;}
+.die{width:64px;height:64px;border:1px solid var(--line-s);background:var(--s3);display:grid;
+  grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:10px;gap:4px;flex-shrink:0;}
+.die.roll{animation:tumble .5s linear infinite;border-color:var(--acid);}
+@keyframes tumble{0%{transform:rotate(0) scale(1)}25%{transform:rotate(-10deg) scale(1.06)}50%{transform:rotate(0) scale(.96)}75%{transform:rotate(10deg) scale(1.04)}100%{transform:rotate(0) scale(1)}}
+.pip{border-radius:50%;background:transparent;}
+.pip.on{background:var(--txt);}
+.die.roll .pip.on{background:var(--acid);}
+.dice-meta{flex:1;}
+.dice-meta .v{font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--txt);}
+.btn-roll{background:transparent;border:1px solid var(--acid);color:var(--acid);font-family:'IBM Plex Mono',monospace;
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:14px 30px;cursor:pointer;transition:.18s;}
+.btn-roll:hover:not(:disabled){background:var(--acid);color:#0a0d00;}
+.btn-roll:disabled{border-color:var(--line);color:var(--dimmer);cursor:not-allowed;}
+
+.evt{border:1px solid var(--line);background:var(--s1);padding:24px 26px;display:none;position:relative;}
+.evt.show{display:block;animation:slideIn .3s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.evt::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--evt-color,var(--dimmer));}
+.evt-top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;}
+.evt-cat{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;}
+.evt-title{font-size:18px;font-weight:500;letter-spacing:-.012em;margin-bottom:10px;}
+.evt-desc{font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:18px;}
+.evt-delta{font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:500;margin-bottom:18px;font-variant-numeric:tabular-nums;}
+.evt-delta .lbl{display:block;font-size:9.5px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-bottom:4px;font-weight:400;}
+.note{border-left:1px solid var(--line-s);padding:12px 0 12px 16px;font-size:12.5px;color:var(--dim);line-height:1.7;}
+.note .nh{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--acid);display:block;margin-bottom:7px;}
+.note strong{color:var(--txt);font-weight:500;}
+
+/* calc block */
+.calc{border:1px solid var(--line);margin-bottom:18px;}
+.calc-row{display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--line);
+  font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums;}
+.calc-row:last-child{border-bottom:none;background:rgba(255,255,255,.025);}
+.calc-row .k{color:var(--dim);letter-spacing:.08em;text-transform:uppercase;font-size:9.5px;align-self:center;}
+
+/* offer */
+.offer-box{border:1px solid var(--line-s);background:var(--s1);padding:24px 26px;display:none;position:relative;}
+.offer-box.show{display:block;animation:slideIn .3s ease;}
+.offer-box::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--down);}
+.of-flag{display:inline-block;background:var(--down);color:#fff;font-family:'IBM Plex Mono',monospace;
+  font-size:9.5px;font-weight:600;letter-spacing:.14em;padding:4px 10px;margin-bottom:14px;}
+.of-title{font-size:19px;font-weight:500;letter-spacing:-.015em;margin-bottom:8px;}
+.of-desc{font-size:12.5px;color:var(--dim);line-height:1.7;margin-bottom:20px;}
+.of-price{display:flex;align-items:baseline;gap:16px;margin-bottom:8px;flex-wrap:wrap;}
+.of-was{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--dimmer);text-decoration:line-through;}
+.of-now{font-family:'IBM Plex Mono',monospace;font-size:32px;color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.of-save{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--down);letter-spacing:.1em;text-transform:uppercase;}
+.of-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dimmer);letter-spacing:.1em;text-transform:uppercase;margin-bottom:22px;}
+.of-btns{display:flex;gap:10px;}
+.btn-buy{flex:1;background:var(--down);color:#fff;border:none;font-family:'IBM Plex Mono',monospace;font-size:11px;
+  font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:14px;cursor:pointer;transition:.18s;}
+.btn-buy:hover{background:#ff6472;}
+.btn-buy:disabled{background:var(--s3);color:var(--dimmer);cursor:not-allowed;}
+.btn-decline{flex:1;background:transparent;border:1px solid var(--line-s);color:var(--txt);font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:14px;cursor:pointer;transition:.18s;}
+.btn-decline:hover{border-color:var(--up);color:var(--up);}
+
+/* quiz */
+.quiz-box{border:1px solid var(--line-s);background:var(--s1);padding:24px 26px;display:none;position:relative;}
+.quiz-box.show{display:block;animation:slideIn .3s ease;}
+.quiz-box::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--acid);}
+.qz-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.qz-q{font-size:16.5px;font-weight:500;line-height:1.5;letter-spacing:-.01em;margin-bottom:20px;}
+.qz-opts{display:flex;flex-direction:column;gap:7px;margin-bottom:8px;}
+.qz-opt{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);background:var(--s2);
+  padding:13px 16px;cursor:pointer;transition:.16s;text-align:left;font-family:'Space Grotesk',sans-serif;
+  font-size:13px;color:var(--txt);line-height:1.5;}
+.qz-opt:hover:not(:disabled){border-color:var(--line-s);background:var(--s3);}
+.qz-opt .lt{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);flex-shrink:0;padding-top:1px;}
+.qz-opt.right{border-color:var(--up);background:rgba(61,220,151,.08);}
+.qz-opt.right .lt{color:var(--up);}
+.qz-opt.wrong{border-color:var(--down);background:rgba(255,77,94,.07);}
+.qz-opt.wrong .lt{color:var(--down);}
+.qz-opt:disabled{cursor:default;}
+
+.btn-next{width:100%;background:transparent;border:1px solid var(--line-s);color:var(--txt);font-family:'IBM Plex Mono',monospace;
+  font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;padding:15px;cursor:pointer;display:none;transition:.18s;}
+.btn-next.show{display:block;animation:slideIn .26s ease;}
+.btn-next:hover{border-color:var(--acid);color:var(--acid);}
+
+/* decision (inversión) */
+.dec{border:1px solid var(--line-s);background:var(--s1);padding:24px 26px;display:none;position:relative;}
+.dec.show{display:block;animation:slideIn .3s ease;}
+.dec::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--dec-color,var(--info));}
+.dec-title{font-size:18px;font-weight:500;letter-spacing:-.012em;margin-bottom:8px;}
+.dec-desc{font-size:12.5px;color:var(--dim);line-height:1.7;margin-bottom:22px;}
+.dec-readout{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;}
+.dec-amount{font-family:'IBM Plex Mono',monospace;font-size:34px;color:var(--dec-color,var(--info));font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.dec-pctlbl{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);}
+input[type=range]{width:100%;-webkit-appearance:none;height:2px;background:var(--line-s);outline:none;cursor:pointer;margin:14px 0 8px;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--dec-color,var(--info));cursor:pointer;border-radius:0;transform:rotate(45deg);}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;background:var(--dec-color,var(--info));border:none;border-radius:0;cursor:pointer;}
+.range-ends{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dimmer);margin-bottom:22px;}
+.dec-btns{display:flex;gap:10px;}
+.btn-exec{flex:1;background:var(--dec-color,var(--info));color:#04140a;border:none;font-family:'IBM Plex Mono',monospace;font-size:11px;
+  font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:14px;cursor:pointer;transition:.18s;}
+.btn-exec:hover{filter:brightness(1.15);}
+.dec-hint{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--dim);letter-spacing:.06em;margin-bottom:18px;}
+.dec-hint b{font-weight:600;}
+.btn-pass{background:transparent;border:1px solid var(--line-s);color:var(--dim);font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:14px 24px;cursor:pointer;transition:.18s;}
+.btn-pass:hover{border-color:var(--dim);color:var(--txt);}
+
+/* dashboard */
+.nw-block{border:1px solid var(--line-s);background:var(--s1);padding:20px;}
+.nw-val{font-family:'IBM Plex Mono',monospace;font-size:31px;font-weight:500;color:var(--acid);letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums;line-height:1;margin:8px 0 10px;}
+.nw-delta{font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;}
+.ledger{border-top:1px solid var(--line);}
+.led-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line);}
+.led-k{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);}
+.led-v{font-family:'IBM Plex Mono',monospace;font-size:14px;font-variant-numeric:tabular-nums;}
+.period-box{border:1px solid var(--line);padding:12px 14px;}
+.period-row{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  font-variant-numeric:tabular-nums;padding:4px 0;}
+.period-row .k{color:var(--dim);letter-spacing:.08em;text-transform:uppercase;font-size:9px;align-self:center;}
+.period-row.tot{border-top:1px solid var(--line);margin-top:5px;padding-top:8px;}
+.alloc-row{margin-bottom:12px;}
+.alloc-top{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;margin-bottom:5px;}
+.alloc-top .k{color:var(--dim);text-transform:uppercase;}
+.alloc-track{height:3px;background:rgba(255,255,255,.06);}
+.alloc-fill{height:100%;transition:width .55s ease;}
+.feed{display:flex;flex-direction:column;gap:1px;max-height:190px;overflow-y:auto;}
+.feed::-webkit-scrollbar{width:4px;}
+.feed::-webkit-scrollbar-thumb{background:var(--line-s);}
+.fitem{font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.55;color:var(--dim);padding:7px 10px;
+  background:var(--s1);border-left:2px solid var(--dimmer);}
+.fitem.up{border-color:var(--up);}
+.fitem.down{border-color:var(--down);}
+.fitem.info{border-color:var(--info);}
+.fitem.warn{border-color:var(--warn);}
+.fitem b{color:var(--txt);font-weight:500;}
+
+/* RESULTS */
+.of-banner{border:1px solid var(--acid);background:rgba(204,255,2,.07);padding:16px 18px;margin-bottom:20px;
+  font-size:clamp(16px,2.6vw,21px);font-weight:600;letter-spacing:-.015em;color:var(--acid);line-height:1.35;}
+.delta-block{border:1px solid var(--line-s);background:var(--s1);padding:34px 32px;margin-bottom:20px;}
+.db-flow{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center;
+  padding-bottom:28px;border-bottom:1px solid var(--line);margin-bottom:28px;}
+.dbf-k{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;}
+.dbf-v{font-family:'IBM Plex Mono',monospace;font-size:clamp(1.5rem,4.2vw,2.4rem);font-variant-numeric:tabular-nums;letter-spacing:-.03em;}
+.dbf-arrow{font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--dimmer);}
+.db-delta-k{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:16px;}
+.db-delta-v{font-family:'IBM Plex Mono',monospace;font-size:clamp(3.2rem,11vw,6.2rem);font-weight:500;
+  line-height:.9;letter-spacing:-.05em;font-variant-numeric:tabular-nums;}
+.db-delta-p{font-family:'IBM Plex Mono',monospace;font-size:clamp(1.05rem,2.8vw,1.7rem);letter-spacing:-.02em;margin-top:14px;}
+.db-delta-note{font-size:13.5px;color:var(--dim);line-height:1.75;max-width:620px;margin-top:22px;}
+.db-delta-note b{color:var(--txt);font-weight:500;}
+.stars-block{border:1px solid var(--line-s);background:var(--s1);padding:30px 32px;margin-bottom:52px;
+  display:flex;align-items:center;justify-content:space-between;gap:26px;flex-wrap:wrap;}
+.stars-row{display:flex;gap:7px;align-items:center;}
+.stars-row svg{width:clamp(34px,6vw,48px);height:clamp(34px,6vw,48px);display:block;}
+.stars-score{font-family:'IBM Plex Mono',monospace;font-size:clamp(1.9rem,5vw,2.8rem);letter-spacing:-.035em;
+  color:var(--acid);font-variant-numeric:tabular-nums;line-height:1;}
+.stars-score small{font-size:.42em;color:var(--dim);letter-spacing:.08em;}
+.stars-label{font-size:17px;font-weight:500;letter-spacing:-.015em;margin-bottom:7px;}
+.stars-desc{font-size:12.5px;color:var(--dim);line-height:1.65;max-width:400px;}
+.stars-scale{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--dimmer);
+  text-transform:uppercase;line-height:2;text-align:right;}
+.res-wrap{max-width:1080px;margin:0 auto;padding:60px 24px 80px;}
+.verdict-tag{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+h2.verdict{font-size:clamp(2rem,5.2vw,3.5rem);font-weight:500;letter-spacing:-.035em;line-height:1;margin-bottom:18px;}
+.verdict-lead{font-size:14px;color:var(--dim);line-height:1.75;max-width:580px;margin-bottom:52px;}
+
+/* balance board */
+.balance{border:1px solid var(--line-s);background:var(--s1);padding:32px;margin-bottom:52px;}
+.bal-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:28px;flex-wrap:wrap;gap:14px;}
+.bal-ratio{font-family:'IBM Plex Mono',monospace;font-size:40px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;}
+.bal-ratio small{font-size:13px;color:var(--dim);letter-spacing:.1em;}
+.bal-side{margin-bottom:26px;}
+.bal-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+.bal-lbl{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;}
+.bal-amt{font-family:'IBM Plex Mono',monospace;font-size:20px;font-variant-numeric:tabular-nums;}
+.bal-track{height:14px;background:rgba(255,255,255,.05);position:relative;}
+.bal-fill{height:100%;transition:width 1.1s cubic-bezier(.4,0,.2,1);}
+.bal-legend{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+  color:var(--dimmer);letter-spacing:.1em;text-transform:uppercase;margin-top:6px;}
+.bal-break{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-top:22px;}
+.bal-cell{background:var(--s1);padding:14px 16px;}
+.bal-cell .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-bottom:7px;}
+.bal-cell .v{font-family:'IBM Plex Mono',monospace;font-size:16px;font-variant-numeric:tabular-nums;}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line-s);border-left:1px solid var(--line);margin-bottom:52px;}
+.metric{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:19px 18px;}
+.metric-k{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;}
+.metric-v{font-family:'IBM Plex Mono',monospace;font-size:20px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.chart-block{border:1px solid var(--line);background:var(--s1);padding:26px;margin-bottom:52px;}
+.lessons{border-top:1px solid var(--line-s);margin-bottom:48px;}
+.lesson{display:grid;grid-template-columns:56px 1fr;gap:22px;padding:24px 0;border-bottom:1px solid var(--line);}
+.lesson-idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--acid);letter-spacing:.1em;}
+.lesson-h{font-size:15px;font-weight:500;margin-bottom:9px;letter-spacing:-.01em;}
+.lesson-b{font-size:13px;color:var(--dim);line-height:1.75;max-width:680px;}
+.btn-reset{background:transparent;border:1px solid var(--line-s);color:var(--txt);font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:15px 38px;cursor:pointer;transition:.18s;}
+.btn-reset:hover{border-color:var(--acid);color:var(--acid);}
+
+.inv-live{border:1px solid var(--line-s);background:var(--s1);padding:14px 16px;}
+.inv-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+.live-badge{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;
+  font-size:8.5px;letter-spacing:.14em;color:var(--info);}
+.live-badge i{width:5px;height:5px;background:var(--info);border-radius:50%;animation:blink 1.6s infinite;}
+.inv-val{font-family:'IBM Plex Mono',monospace;font-size:26px;color:var(--info);font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em;line-height:1;margin-bottom:7px;}
+.inv-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;color:var(--dim);}
+.src{border:1px solid var(--line-s);background:var(--s1);padding:24px 26px;display:none;position:relative;}
+.src.show{display:block;animation:slideIn .3s ease;}
+.src::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--alt);}
+.src-title{font-size:18px;font-weight:500;letter-spacing:-.012em;margin-bottom:8px;}
+.src-desc{font-size:12.5px;color:var(--dim);line-height:1.7;margin-bottom:20px;}
+.src-opts{display:flex;flex-direction:column;gap:8px;}
+.src-opt{display:flex;align-items:center;gap:14px;border:1px solid var(--line);background:var(--s2);
+  padding:15px 18px;cursor:pointer;transition:.16s;text-align:left;font-family:'Space Grotesk',sans-serif;width:100%;}
+.src-opt:hover{border-color:var(--src-c,var(--line-s));background:var(--s3);}
+.src-opt .sc-l{flex:1;}
+.src-opt .sc-n{display:block;font-size:14px;color:var(--txt);font-weight:500;margin-bottom:3px;}
+.src-opt .sc-d{display:block;font-size:11.5px;color:var(--dim);line-height:1.5;}
+.src-opt .sc-v{font-family:'IBM Plex Mono',monospace;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.alert-bar{border:1px solid var(--down);background:rgba(255,77,94,.09);padding:13px 16px;margin-bottom:16px;}
+.ab-title{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--down);margin-bottom:6px;}
+.ab-txt{display:block;font-size:12.5px;color:var(--dim);line-height:1.65;}
+
+/* ── resultados: tipografía ampliada ── */
+.verdict-lead{font-size:16.5px!important;line-height:1.8!important;max-width:660px!important;}
+.metric-k{font-size:11px!important;}
+.metric-v{font-size:26px!important;}
+.metric{padding:24px 20px!important;}
+.bal-amt{font-size:27px!important;}
+.bal-lbl{font-size:11.5px!important;}
+.bal-ratio{font-size:48px!important;}
+.bal-cell .k{font-size:10.5px!important;}
+.bal-cell .v{font-size:21px!important;}
+.bal-legend{font-size:10.5px!important;}
+.lesson-h{font-size:18px!important;}
+.lesson-b{font-size:15px!important;line-height:1.8!important;max-width:760px!important;}
+.lesson-idx{font-size:13px!important;}
+.hero-tag .micro,.verdict-tag .micro{font-size:11px!important;}
+
+/* ── saldos finales ── */
+.saldos{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);margin-bottom:52px;
+  border:1px solid var(--line-s);}
+.saldo{background:var(--s1);padding:26px 22px;}
+.saldo .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:12px;}
+.saldo .v{font-family:'IBM Plex Mono',monospace;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:-.025em;line-height:1;}
+.saldo .s{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dimmer);margin-top:10px;letter-spacing:.06em;}
+
+/* ── atribución ── */
+.attrib{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line-s);margin-bottom:52px;}
+.att-cell{background:var(--s1);padding:24px 22px;}
+.att-tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;padding:4px 10px;margin-bottom:14px;}
+.att-v{font-family:'IBM Plex Mono',monospace;font-size:28px;font-variant-numeric:tabular-nums;letter-spacing:-.025em;margin-bottom:10px;}
+.att-d{font-size:13px;color:var(--dim);line-height:1.7;}
+
+/* ── recomendaciones ── */
+.recs{border-top:1px solid var(--line-s);margin-bottom:48px;}
+.rec{display:grid;grid-template-columns:64px 1fr;gap:24px;padding:26px 0;border-bottom:1px solid var(--line);}
+.rec-idx{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--warn);letter-spacing:.1em;}
+.rec-h{font-size:18px;font-weight:500;margin-bottom:10px;letter-spacing:-.01em;}
+.rec-b{font-size:15px;color:var(--dim);line-height:1.8;max-width:760px;}
+.rec-b b{color:var(--txt);font-weight:500;}
+
+@media(max-width:900px){
+  .g-body{grid-template-columns:1fr;overflow-y:auto;}
+  .col-l{display:none;}
+  .col-r{border-left:none;border-top:1px solid var(--line);}
+  #screen-game.active{height:auto;min-height:100vh;}
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .ts-row,.mod-row{grid-template-columns:1fr;gap:6px;}
+  .lesson{grid-template-columns:1fr;gap:8px;}
+  .dice-mod{flex-direction:column;align-items:stretch;gap:16px;}
+  .bal-break{grid-template-columns:1fr;}
+  .saldos{grid-template-columns:repeat(2,1fr);}
+  .attrib{grid-template-columns:1fr;}
+  .rec{grid-template-columns:1fr;gap:8px;}
+  .of-btns,.dec-btns{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ INTRO ═══ -->
+<div id="screen-intro" class="screen active">
+  <div class="masthead">
+    <span class="mh-mark">CF</span><span class="mh-sep">/</span><span>Camino Financiero</span>
+    <span class="mh-sep">/</span><span>Terminal de simulación</span>
+    <div class="mh-right"><span>Rel. 3.0</span><span>MXN</span></div>
+  </div>
+  <div class="intro-hero">
+    <div class="hero-tag"><span class="micro">Simulador de decisiones económicas</span><span class="rule"></span></div>
+    <h1 class="hero"><span class="lo">Veinticinco nodos.</span><br/>Un solo dado.<br/><span class="hi">Tu patrimonio.</span></h1>
+    <p class="hero-lead">Un modelo conductual que pone a prueba una sola pregunta: ¿mejora tu situación quien gana más, o quien gasta mejor? Aquí puedes elevar tu ingreso capacitándote, pero cada oferta aceptada estrecha el margen antes de que llegues a decidir cuánto apartar.</p>
+
+    <div class="hero-tag"><span class="micro">Parámetros del ejercicio</span><span class="rule"></span></div>
+    <div class="termsheet">
+      <div class="ts-row"><span class="ts-key">Capital inicial</span><span class="ts-val">Disponible (liquidez inmediata) al arranque</span><span class="ts-num">$3,000.00</span></div>
+      <div class="ts-row"><span class="ts-key">Extensión</span><span class="ts-val">Nodos visitados hasta el cierre del ejercicio</span><span class="ts-num">25 nodos</span></div>
+      <div class="ts-row"><span class="ts-key">Mecanismo de avance</span><span class="ts-val">Un dado de seis caras, resultado aleatorio</span><span class="ts-num">1 – 6</span></div>
+      <div class="ts-row"><span class="ts-key">Sueldo por nodo INC</span><span class="ts-val">Percepción ordinaria acreditada al efectivo</span><span class="ts-num">$1,200.00</span></div>
+      <div class="ts-row"><span class="ts-key">Reactivo por nodo INC</span><span class="ts-val">Acierto acredita bono; error lo descuenta del disponible</span><span class="ts-num">± $350.00</span></div>
+      <div class="ts-row"><span class="ts-key">Capacitación</span><span class="ts-val">Costo único que eleva de forma permanente el sueldo</span><span class="ts-num">$500 – $1,900</span></div>
+      <div class="ts-row"><span class="ts-key">Tasa del fondo de ahorro</span><span class="ts-val">Rendimiento nominal anual, capitaliza por nodo</span><span class="ts-num">7.00%</span></div>
+      <div class="ts-row"><span class="ts-key">Rango de inversión</span><span class="ts-val">Rendimiento anualizado con volatilidad estocástica</span><span class="ts-num">4.0% – 14.0%</span></div>
+    </div>
+
+    <div class="hero-tag"><span class="micro">Arquitectura de nodos</span><span class="rule"></span></div>
+    <div class="mod-grid">
+      <div class="mod-row"><span class="mod-idx">INC</span>
+        <span class="mod-name">Ingresos<span class="bar" style="background:var(--acid)"></span><span class="tagm">Sueldo + reactivo</span></span>
+        <span class="mod-desc">Se acredita el sueldo —incrementado por la capacitación acumulada— y se plantea un reactivo de cultura financiera. El acierto suma el bono; el error lo descuenta del disponible. Ningún reactivo se repite durante la partida.</span></div>
+      <div class="mod-row"><span class="mod-idx">GAS</span>
+        <span class="mod-name">Gastos corrientes<span class="bar" style="background:var(--warn)"></span><span class="tagm">Asignación automática</span></span>
+        <span class="mod-desc">Renta, despensa, transporte, servicios. Cargo automático e inevitable: es el piso de consumo que ninguna estrategia elimina, solo administra.</span></div>
+      <div class="mod-row"><span class="mod-idx">SAV</span>
+        <span class="mod-name">Ahorro<span class="bar" style="background:var(--up)"></span><span class="tagm">Decisión del jugador</span></span>
+        <span class="mod-desc">El sistema resta los gastos del periodo a los ingresos y muestra la capacidad de ahorro resultante. El jugador decide cuánto trasladar al fondo: puede ajustarse a esa capacidad, quedarse corto o financiarla con efectivo previo.</span></div>
+      <div class="mod-row"><span class="mod-idx">OFR</span>
+        <span class="mod-name">Oferta comercial<span class="bar" style="background:var(--down)"></span><span class="tagm">Decisión del jugador</span></span>
+        <span class="mod-desc">Una promoción con descuento visible y ahorro anunciado. El jugador acepta o declina. La cifra que el comercio llama «ahorro» es, en el balance, un egreso que reduce la capacidad de ahorro del siguiente nodo SAV.</span></div>
+      <div class="mod-row"><span class="mod-idx">RSK</span>
+        <span class="mod-name">Imprevistos<span class="bar" style="background:var(--alt)"></span><span class="tagm">Eliges la fuente</span></span>
+        <span class="mod-desc">Gastos hospitalarios, reparaciones, fallas domésticas, sanciones. Aleatorios y sin opción de rechazo, pero tú decides de dónde sale el dinero: apartados, inversión o disponible. Si no hay respaldo, el sistema lo notifica y carga directamente contra el disponible.</span></div>
+      <div class="mod-row"><span class="mod-idx">CAP</span>
+        <span class="mod-name">Capacitación<span class="bar" style="background:var(--acid)"></span><span class="tagm">Decisión del jugador</span></span>
+        <span class="mod-desc">Cursos, diplomados y certificaciones que reducen el disponible hoy a cambio de un incremento permanente del sueldo en cada nodo INC posterior. Permite comprobar si aumentar el ingreso, por sí solo, mejora el resultado cuando el gasto no se contiene.</span></div>
+      <div class="mod-row"><span class="mod-idx">INV</span>
+        <span class="mod-name">Inversión<span class="bar" style="background:var(--info)"></span><span class="tagm">Decisión del jugador</span></span>
+        <span class="mod-desc">Ventana de asignación libre al portafolio, con exposición real a ciclos de alza y corrección. Es el único nodo donde el jugador decide cuánto capital pone a trabajar.</span></div>
+      <div class="mod-row"><span class="mod-idx">EXT</span>
+        <span class="mod-name">Extraordinarios<span class="bar" style="background:var(--up)"></span><span class="tagm">Asignación automática</span></span>
+        <span class="mod-desc">Cumpleaños, aguinaldo, devolución fiscal, expansión de mercado. Ingresos fuera del flujo ordinario que revelan cómo se administra lo que no se esperaba.</span></div>
+    </div>
+
+    <div class="cta-row">
+      <button class="btn-primary" onclick="startGame()">Iniciar simulación</button>
+      <span class="cta-note">Sesión anónima · Sin registro · Resultados locales</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="screen-game" class="screen">
+  <div class="masthead">
+    <span class="mh-mark">CF</span><span class="mh-sep">/</span><span>Sesión activa</span>
+    <div class="tstrip" id="tstrip"></div>
+    <div class="mh-right"><span><span class="live-dot"></span>En curso</span><span>Nodo <span id="t-num">00</span>/25</span></div>
+  </div>
+
+  <div class="g-body">
+    <div class="col col-l">
+      <div class="sec-head"><span class="micro">Tablero · 25 nodos</span><span class="rule"></span></div>
+      <div class="board" id="board"></div>
+      <div class="key-list" id="key-list"></div>
+    </div>
+
+    <div class="col col-c">
+      <div class="dice-mod">
+        <div class="die" id="die"></div>
+        <div class="dice-meta">
+          <div class="micro">Resultado del dado</div>
+          <div class="v mono" id="dice-out">—</div>
+        </div>
+        <button class="btn-roll" id="btn-roll" onclick="rollDice()">Lanzar dado</button>
+      </div>
+
+      <div class="node-panel" id="node-panel">
+        <div class="np-top"><span class="np-code" id="np-code">ST</span><span class="np-cat" id="np-cat">Posición inicial</span></div>
+        <div class="np-name" id="np-name">Arranque del ejercicio</div>
+        <div class="np-desc" id="np-desc">Lanza el dado para avanzar. Cada nodo activa un evento o una decisión: el ahorro parte de la diferencia entre ingresos y gastos, la capacitación cuesta hoy para pagar después, y las ofertas son la tentación que sí puedes rechazar.</div>
+      </div>
+
+      <div class="quiz-box" id="quiz">
+        <div class="qz-top"><span class="micro" id="qz-tag">Reactivo de cultura financiera</span><span class="micro" id="qz-count"></span></div>
+        <div class="qz-q" id="qz-q"></div>
+        <div class="qz-opts" id="qz-opts"></div>
+      </div>
+
+      <div class="offer-box" id="offer">
+        <div class="of-banner" id="of-banner"></div>
+        <span class="of-flag" id="of-flag">OFERTA</span>
+        <div class="of-title" id="of-title"></div>
+        <div class="of-desc" id="of-desc"></div>
+        <div class="of-price">
+          <span class="of-was" id="of-was"></span>
+          <span class="of-now" id="of-now"></span>
+        </div>
+        <div class="of-save" id="of-save"></div>
+        <div class="of-meta" id="of-meta"></div>
+        <div class="of-btns">
+          <button class="btn-buy" id="btn-buy" onclick="acceptOffer()">Aprovechar la oferta</button>
+          <button class="btn-decline" onclick="declineOffer()">Dejar pasar</button>
+        </div>
+      </div>
+
+      <div class="src" id="src">
+        <div class="src-title" id="src-title"></div>
+        <div class="src-desc" id="src-desc"></div>
+        <div class="src-opts" id="src-opts"></div>
+      </div>
+
+      <div class="evt" id="evt">
+        <div class="evt-top"><span class="evt-cat" id="evt-cat"></span><span class="micro" id="evt-code"></span></div>
+        <div class="evt-title" id="evt-title"></div>
+        <div class="evt-desc" id="evt-desc"></div>
+        <div id="evt-calc"></div>
+        <div class="evt-delta" id="evt-delta"></div>
+        <div class="note"><span class="nh">Nota conductual</span><span id="evt-note"></span></div>
+      </div>
+
+      <div class="dec" id="dec">
+        <div class="dec-title" id="dec-title">Ventana de inversión — asignación</div>
+        <div class="dec-desc" id="dec-desc"></div>
+        <div id="dec-calc"></div>
+        <div class="dec-readout"><span class="dec-amount" id="dec-amount">$0</span><span class="dec-pctlbl" id="dec-pct">0% del efectivo</span></div>
+        <input type="range" id="slider" min="0" max="100" value="20" oninput="updateSlider()"/>
+        <div class="range-ends"><span>$0</span><span id="r-max">$0</span></div>
+        <div class="dec-hint" id="dec-hint"></div>
+        <div class="dec-btns"><button class="btn-exec" id="btn-exec" onclick="confirmDecision()">Ejecutar</button><button class="btn-pass" onclick="skipDecision()">Omitir</button></div>
+      </div>
+
+      <button class="btn-next" id="btn-next" onclick="nextTurn()">Continuar</button>
+    </div>
+
+    <div class="col col-r">
+      <div class="nw-block">
+        <div class="micro">Patrimonio neto</div>
+        <div class="nw-val" id="nw">$5,000</div>
+        <div class="nw-delta" id="nw-delta" style="color:var(--dim)">— 0.0% desde inicio</div>
+      </div>
+      <div>
+        <div class="sec-head"><span class="micro">Posiciones</span><span class="rule"></span></div>
+        <div class="ledger">
+          <div class="led-row"><span class="led-k">Disponible · liquidez inmediata</span><span class="led-v" id="l-cash">$3,000</span></div>
+          <div class="led-row"><span class="led-k">Apartados · ahorro SV</span><span class="led-v" id="l-sav" style="color:var(--up)">$0</span></div>
+          <div class="led-row"><span class="led-k">Ingreso por nodo INC</span><span class="led-v" id="l-sal" style="color:var(--acid)">$1,200</span></div>
+          <div class="led-row" id="debt-row" style="display:none"><span class="led-k">Deuda contraída</span><span class="led-v" id="l-debt" style="color:var(--down)">$0</span></div>
+        </div>
+        <div class="inv-live">
+          <div class="inv-top"><span class="led-k">Inversión</span><span class="live-badge"><i></i>EN VIVO</span></div>
+          <div class="inv-val" id="l-inv">$0</div>
+          <div class="inv-sub" id="inv-sub">Sin posiciones abiertas</div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-head"><span class="micro">Periodo en curso</span><span class="rule"></span></div>
+        <div class="period-box">
+          <div class="period-row"><span class="k">Ingresos</span><span id="p-inc" style="color:var(--up)">$0</span></div>
+          <div class="period-row"><span class="k">Gastos</span><span id="p-exp" style="color:var(--down)">$0</span></div>
+          <div class="period-row tot"><span class="k">Capacidad de ahorro</span><span id="p-net" style="color:var(--acid)">$0</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-head"><span class="micro">Asignación</span><span class="rule"></span></div>
+        <div class="alloc-row"><div class="alloc-top"><span class="k">Disponible</span><span id="ap-cash" style="color:var(--acid)">100%</span></div><div class="alloc-track"><div class="alloc-fill" id="af-cash" style="width:100%;background:var(--acid)"></div></div></div>
+        <div class="alloc-row"><div class="alloc-top"><span class="k">Apartados</span><span id="ap-sav" style="color:var(--up)">0%</span></div><div class="alloc-track"><div class="alloc-fill" id="af-sav" style="width:0%;background:var(--up)"></div></div></div>
+        <div class="alloc-row"><div class="alloc-top"><span class="k">Inversión</span><span id="ap-inv" style="color:var(--info)">0%</span></div><div class="alloc-track"><div class="alloc-fill" id="af-inv" style="width:0%;background:var(--info)"></div></div></div>
+      </div>
+      <div>
+        <div class="sec-head"><span class="micro">Bitácora</span><span class="rule"></span></div>
+        <div class="feed" id="feed"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RESULTS ═══ -->
+<div id="screen-results" class="screen">
+  <div class="masthead">
+    <span class="mh-mark">CF</span><span class="mh-sep">/</span><span>Cierre del ejercicio</span>
+    <div class="mh-right"><span>25/25 nodos</span><span>Informe final</span></div>
+  </div>
+  <div class="res-wrap">
+    <div class="verdict-tag"><span class="micro" id="v-tag"></span><span class="rule" style="flex:1;height:1px;background:var(--line)"></span></div>
+    <h2 class="verdict" id="verdict"></h2>
+    <p class="verdict-lead" id="verdict-lead"></p>
+
+    <div class="hero-tag" style="margin-bottom:0"><span class="micro">Del arranque al cierre</span><span class="rule"></span></div>
+    <div class="delta-block" id="delta-block"></div>
+    <div class="stars-block" id="stars-block"></div>
+
+    <div class="hero-tag" style="margin-bottom:0"><span class="micro">Saldos finales</span><span class="rule"></span></div>
+    <div class="saldos" id="saldos"></div>
+
+    <div class="hero-tag" style="margin-bottom:0"><span class="micro">Tablero de comportamiento financiero — construir frente a consumir</span><span class="rule"></span></div>
+    <div class="balance" id="balance"></div>
+
+    <div class="hero-tag" style="margin-bottom:0"><span class="micro">Atribución del deterioro — qué dependió de ti</span><span class="rule"></span></div>
+    <div class="attrib" id="attrib"></div>
+
+    <div class="hero-tag" style="margin-bottom:0"><span class="micro">Métricas de cierre</span><span class="rule"></span></div>
+    <div class="metrics" id="metrics"></div>
+
+    <div class="hero-tag" style="margin-bottom:0"><span class="micro">Trayectoria patrimonial</span><span class="rule"></span></div>
+    <div class="chart-block"><canvas id="chart" style="max-height:260px;"></canvas></div>
+
+    <div class="hero-tag" style="margin-bottom:0"><span class="micro">Hallazgos</span><span class="rule"></span></div>
+    <div class="lessons" id="lessons"></div>
+
+    <div class="hero-tag" style="margin-bottom:0"><span class="micro">Recomendaciones finales</span><span class="rule"></span></div>
+    <div class="recs" id="recs"></div>
+
+    <button class="btn-reset" onclick="restartGame()">Reiniciar simulación</button>
+  </div>
+</div>
+
+<script>
+// ═══════ CONFIG ═══════
+const START=3000;
+const TOTAL_NODES=25, SALARY=1200, QUIZ_BONUS=350, CYCLE_BONUS=400;
+
+const TYPES={
+  start:{code:'ST', cat:'Inicio',            color:'var(--dimmer)'},
+  inc:  {code:'INC',cat:'Ingresos',          color:'var(--acid)'},
+  gas:  {code:'GAS',cat:'Gastos corrientes', color:'var(--warn)'},
+  sav:  {code:'SAV',cat:'Ahorro automático', color:'var(--up)'},
+  ofr:  {code:'OFR',cat:'Oferta comercial',  color:'var(--down)'},
+  rsk:  {code:'RSK',cat:'Imprevisto',        color:'var(--alt)'},
+  inv:  {code:'INV',cat:'Inversión',         color:'var(--info)'},
+  ext:  {code:'EXT',cat:'Extraordinario',    color:'var(--up)'},
+  ret:  {code:'RET',cat:'Retiro de inversión',color:'var(--warn)'},
+  cap:  {code:'CAP',cat:'Capacitación',       color:'var(--acid)'},
+  cic:  {code:'CIC',cat:'Cierre de ciclo',   color:'var(--acid)'},
+};
+const SPACES=['start','inc','gas','ofr','sav','rsk','cap','inc','ofr','inv','sav','inc',
+  'rsk','ofr','ret','gas','sav','inc','ofr','ext','rsk','cap','inc','inv','ofr'];
+const NAMES=['Arranque','Sueldo acreditado','Gastos del hogar','Promoción vigente','Corte de ahorro',
+  'Imprevisto','Oferta de capacitación','Sueldo acreditado','Promoción vigente','Ventana de inversión',
+  'Corte de ahorro','Sueldo acreditado','Imprevisto','Promoción vigente','Ventana de liquidación',
+  'Gastos del hogar','Corte de ahorro','Sueldo acreditado','Promoción vigente','Ingreso extraordinario',
+  'Imprevisto','Oferta de capacitación','Sueldo acreditado','Ventana de inversión','Promoción vigente'];
+const NODE_DESC={
+  start:'Punto de partida. El capital inicial está íntegramente en efectivo.',
+  inc:'Se acredita el sueldo y se plantea un reactivo de cultura financiera. El acierto libera un bono adicional.',
+  gas:'Cargo automático por gastos corrientes del hogar. No admite rechazo ni diferimiento.',
+  sav:'Corte de ahorro. El sistema calcula la capacidad del periodo y el jugador decide qué monto traslada al fondo.',
+  ofr:'Promoción comercial con descuento. Única decisión de consumo bajo control del jugador.',
+  rsk:'Contingencia aleatoria con cargo automático a efectivo y, de ser insuficiente, al fondo de ahorro.',
+  inv:'Ventana de asignación libre al portafolio de inversión.',
+  ext:'Ingreso fuera del flujo ordinario, acreditado automáticamente.',
+  ret:'Ventana de liquidación. Permite retirar total o parcialmente el saldo invertido y devolverlo a disponible.',
+  cap:'Oferta formativa. Reduce el disponible hoy a cambio de un incremento permanente del sueldo en cada nodo INC posterior.',
+  cic:'Vuelta completa al tablero. Se acredita un bono de constancia.',
+};
+
+// ═══ REACTIVOS (no se repiten) ═══
+const QUIZ=[
+ {q:'Depositas $1,000 a una tasa de interés simple del 10% anual. ¿Cuánto tendrás al cabo de un año?',
+  o:['$1,010','$1,100','$1,000','$1,110'],c:1,
+  e:'El interés simple se calcula sobre el capital original: $1,000 × 10% = $100 de interés, para un total de $1,100.'},
+ {q:'Con una inflación anual del 5%, ¿qué ocurre con el dinero que mantienes en efectivo bajo el colchón?',
+  o:['Mantiene su valor','Gana valor lentamente','Pierde poder adquisitivo','No le afecta la inflación'],c:2,
+  e:'La inflación erosiona el poder de compra. Los mismos $1,000 comprarán aproximadamente 5% menos bienes al cabo de un año.'},
+ {q:'¿Qué distingue al interés compuesto del interés simple?',
+  o:['Se calcula solo al final del plazo','Los intereses generan a su vez nuevos intereses','Siempre paga una tasa menor','Se aplica únicamente a créditos'],c:1,
+  e:'En el interés compuesto los rendimientos se reinvierten y comienzan a generar rendimiento propio. Es el mecanismo que hace crecer el patrimonio de forma exponencial con el tiempo.'},
+ {q:'En México, ¿qué expresa el CAT de un crédito?',
+  o:['Solo la tasa de interés anual','El costo anual total, incluidas comisiones y seguros','El plazo máximo del crédito','El monto mínimo a pagar'],c:1,
+  e:'El Costo Anual Total integra intereses, comisiones, seguros y demás cargos. Es la única cifra que permite comparar créditos entre instituciones de forma equivalente.'},
+ {q:'Diversificar una inversión significa:',
+  o:['Concentrar todo en el instrumento más rentable','Distribuir el capital entre varios instrumentos para reducir el riesgo','Invertir únicamente a corto plazo','Retirar el dinero cuando el mercado baja'],c:1,
+  e:'La diversificación reduce la exposición a que un solo activo determine el resultado del portafolio. No elimina el riesgo, pero lo hace manejable.'},
+ {q:'¿A cuánto equivale un fondo de emergencia recomendado?',
+  o:['Un mes de gastos','Entre tres y seis meses de gastos','Un año completo de ingresos','No es necesario si tienes tarjeta de crédito'],c:1,
+  e:'Entre tres y seis meses de gasto corriente es el rango que permite absorber una interrupción de ingreso sin liquidar inversiones de largo plazo en el peor momento.'},
+ {q:'La regla presupuestal 50/30/20 propone destinar:',
+  o:['50% ahorro, 30% deudas, 20% gastos','50% necesidades, 30% deseos, 20% ahorro','50% inversión, 30% ahorro, 20% consumo','50% deudas, 30% necesidades, 20% ocio'],c:1,
+  e:'Es un marco de referencia, no una norma rígida: 50% a necesidades básicas, 30% a gasto discrecional y al menos 20% a ahorro e inversión.'},
+ {q:'En términos generales, a mayor rendimiento esperado en una inversión:',
+  o:['Menor riesgo asumido','Mayor riesgo asumido','El riesgo no guarda relación','El plazo siempre es más corto'],c:1,
+  e:'La relación riesgo-rendimiento es una de las regularidades más consistentes del mercado. Todo rendimiento superior al de un instrumento libre de riesgo se paga con volatilidad.'},
+ {q:'La liquidez de un activo se refiere a:',
+  o:['Su rentabilidad anual','La rapidez con que puede convertirse en efectivo sin perder valor','El plazo de vencimiento','El nivel de riesgo crediticio'],c:1,
+  e:'Un activo líquido puede venderse rápido y a precio justo. Los inmuebles rinden, pero su baja liquidez los descalifica como fondo de emergencia.'},
+ {q:'Si tu tarjeta de crédito cobra 45% anual y solo cubres el pago mínimo:',
+  o:['Liquidas la deuda en pocos meses','La deuda crece porque los intereses se acumulan','No se generan intereses','El banco condona el saldo'],c:1,
+  e:'El pago mínimo cubre principalmente intereses. El saldo insoluto sigue generando cargos, y la deuda puede tardar años en liquidarse.'},
+ {q:'El costo de oportunidad de una compra es:',
+  o:['El precio de lista del producto','El impuesto que pagas','El beneficio de la mejor alternativa que dejaste de elegir','El descuento aplicado'],c:2,
+  e:'Todo peso gastado en una cosa es un peso que no rinde en otra. El costo real de un consumo incluye lo que ese capital habría generado invertido.'},
+ {q:'¿Qué instrumento en México ofrece capital respaldado por el Gobierno Federal?',
+  o:['Acciones de la BMV','CETES','Criptomonedas','Fondos de capital privado'],c:1,
+  e:'Los Certificados de la Tesorería son deuda gubernamental de corto plazo. Su respaldo soberano los convierte en la referencia de bajo riesgo del mercado mexicano.'},
+ {q:'Un instrumento rinde 6% anual y la inflación es de 7%. Tu rendimiento real es:',
+  o:['Positivo, de 6%','Positivo, de 13%','Negativo, cercano a −1%','Neutro'],c:2,
+  e:'El rendimiento real descuenta la inflación. Ganar nominalmente y perder poder adquisitivo es un escenario frecuente y poco visible.'},
+ {q:'La función principal de un presupuesto personal es:',
+  o:['Registrar gastos después de que ocurren','Anticipar y dirigir el destino de los ingresos','Calcular impuestos','Solicitar créditos con mejores tasas'],c:1,
+  e:'El presupuesto es un instrumento de anticipación, no de registro. Asigna el ingreso antes de que llegue, que es cuando la decisión aún es libre.'},
+ {q:'¿Qué significa que una inversión tenga rendimiento "anualizado"?',
+  o:['Que solo paga una vez al año','Que el rendimiento se expresa en su equivalente por año','Que dura exactamente doce meses','Que está garantizado por un año'],c:1,
+  e:'La anualización estandariza rendimientos de distintos plazos para hacerlos comparables. Un 2% mensual no equivale a 24% anual por efecto de la capitalización.'},
+ {q:'El principal riesgo de depender de una sola fuente de ingreso es:',
+  o:['Pagar más impuestos','Que su interrupción compromete todo el flujo financiero','Que reduce el historial crediticio','Que impide invertir'],c:1,
+  e:'La concentración de ingreso es el riesgo personal de mayor severidad. Ni el mejor presupuesto compensa la pérdida total del flujo sin una reserva previa.'},
+];
+
+// ═══ OFERTAS ═══
+const OFFER_BANNER='Veamos qué tan bueno eres para elegir ofertas.';
+const OFFERS=[
+ {t:'Televisión Full HD 55 pulgadas',was:3600,now:2160,
+  d:'Pantalla de 55" con resolución Full HD y aplicaciones integradas. Liquidación por cambio de modelo.',meta:'Últimas 3 piezas · Entrega inmediata',
+  n:'<strong>El descuento no es un ingreso.</strong> El comercio anuncia un ahorro de $1,440, pero tu estado de cuenta registra una salida de $2,160. El único ahorro verificable es el de quien no compra.'},
+ {t:'Computadora Intel Core i9',was:4200,now:2940,
+  d:'Equipo de escritorio con procesador de última generación y 32 GB de memoria. Promoción de temporada.',meta:'30% de descuento · 12 meses sin intereses',
+  n:'<strong>Meses sin intereses.</strong> El financiamiento sin costo aparente compromete flujo que aún no has generado. Antes de aceptarlo, verifica que la mensualidad quepa en el presupuesto de los próximos doce cortes, no solo en el de hoy.'},
+ {t:'Teléfono inteligente de gama alta',was:2800,now:1960,
+  d:'Modelo del año anterior con cámara de triple lente. Descuento por renovación de inventario.',meta:'Bonificación por equipo a cuenta',
+  n:'<strong>Ciclo de reemplazo inducido.</strong> La obsolescencia percibida corre más rápido que la funcional. Extender un año el reemplazo de un equipo de este costo libera capital equivalente a varios cortes de ahorro.'},
+ {t:'Audífonos inalámbricos premium',was:1600,now:960,
+  d:'Modelo de la temporada anterior con cancelación activa de ruido. Promoción válida únicamente hoy.',meta:'Existencias limitadas · 4 piezas',
+  n:'<strong>Escasez fabricada.</strong> La leyenda de existencias limitadas comprime el tiempo de deliberación. Regla operativa: si no lo contemplabas hace 48 horas, difiere la decisión otras 48.'},
+ {t:'Reloj inteligente con GPS',was:1500,now:900,
+  d:'Monitor de actividad, notificaciones y batería de 14 días. Promoción de preventa.',meta:'Preventa · Entrega en 15 días',
+  n:'<strong>Anclaje de precio.</strong> El precio tachado funciona como referencia artificial: hace parecer razonable un desembolso que nunca estuvo en tu presupuesto.'},
+ {t:'Consola portátil de videojuegos',was:1400,now:980,
+  d:'Liquidación por cambio de modelo. Incluye dos títulos precargados.',meta:'Último día de promoción',
+  n:'<strong>Justificación por uso futuro.</strong> El valor prometido rara vez se cuantifica antes de comprar. Estima cuántas horas de uso real requeriría el equipo para justificar su costo por hora.'},
+ {t:'Paquete de ropa — 3 por 2',was:1200,now:800,
+  d:'Tres prendas de temporada al precio de dos. Aplica en piezas seleccionadas.',meta:'Promoción de fin de temporada',
+  n:'<strong>Compra por volumen.</strong> La promoción multiplicativa induce a adquirir más unidades de las necesarias. El costo unitario baja; el egreso total sube.'},
+ {t:'Mochila de viaje ejecutiva',was:1100,now:660,
+  d:'Compartimento para laptop y garantía extendida. Última liquidación del año.',meta:'Liquidación final · Sin cambios ni devoluciones',
+  n:'<strong>Ventas finales.</strong> La cláusula sin cambios ni devoluciones transfiere todo el riesgo al comprador. Un descuento que elimina tu derecho de arrepentimiento no es tan favorable como aparenta.'},
+ {t:'Suscripción anual premium',was:1080,now:650,
+  d:'Pago único anual con 40% de descuento frente a la mensualidad.',meta:'Renovación automática activada',
+  n:'<strong>Compromiso de largo plazo.</strong> El descuento anual es real, pero solo si el uso se sostiene doce meses. La renovación automática convierte el olvido en un cargo recurrente.'},
+ {t:'Cafetera de especialidad',was:900,now:540,
+  d:'Equipo con molino integrado. Descuento del 40% por temporada de liquidación.',meta:'40% de descuento · Solo en línea',
+  n:'<strong>Amortización prometida.</strong> «Ahorraré en café» es una hipótesis, no un dato. Calcula cuántos meses de uso sostenido requeriría el equipo para recuperar su costo antes de aceptar la promoción.'},
+ {t:'Kit de accesorios para el hogar',was:840,now:520,
+  d:'Set de organización y decoración. Promoción de temporada.',meta:'Máximo 2 unidades por cliente',
+  n:'<strong>Límite por cliente.</strong> Restringir la cantidad sugiere demanda alta y estimula la compra inmediata. Es una técnica de conversión, no un dato de inventario.'},
+ {t:'Bocina portátil bluetooth',was:780,now:470,
+  d:'Resistente al agua, autonomía de 20 horas. Descuento por rotación de inventario.',meta:'Envío gratuito solo hoy',
+  n:'<strong>Umbral de bajo importe.</strong> Los montos pequeños escapan al escrutinio presupuestal. Cuatro decisiones de $470 al año equivalen a un mes completo de gasto corriente.'},
+ {t:'Cena degustación para dos',was:760,now:380,
+  d:'Menú de siete tiempos al 2x1. Reservación sujeta a disponibilidad.',meta:'Válido de lunes a jueves',
+  n:'<strong>Gasto de experiencia.</strong> El ocio tiene valor legítimo y no debe eliminarse; debe presupuestarse. Sin partida asignada, compite directamente contra el fondo de ahorro.'},
+];
+
+// ═══ GASTOS CORRIENTES ═══
+const GASTOS=[
+ {t:'Renta y servicios básicos',a:850,d:'Pago de renta, energía eléctrica y agua correspondientes al periodo.',
+  n:'<strong>Gasto fijo estructural.</strong> Representa el mayor componente del presupuesto de un hogar promedio. No se elimina, pero definirlo como techo —y no como variable— protege la capacidad de ahorro.'},
+ {t:'Despensa del periodo',a:620,d:'Abasto de alimentos y artículos de primera necesidad.',
+  n:'<strong>Gasto variable con margen real.</strong> A diferencia de la renta, la despensa admite optimización mediante planeación de compras. Es el rubro con mayor retorno por esfuerzo administrativo.'},
+ {t:'Transporte y combustible',a:480,d:'Traslados, combustible y mantenimiento menor del periodo.',
+  n:'<strong>Costo de movilidad.</strong> Rara vez se contabiliza de forma integral. Sumar combustible, mantenimiento, seguro y depreciación revela el costo verdadero del traslado diario.'},
+ {t:'Telefonía y servicios digitales',a:390,d:'Plan de datos, conectividad y plataformas contratadas.',
+  n:'<strong>Recurrencia invisible.</strong> Los cargos automáticos se normalizan y dejan de revisarse. Una auditoría de domiciliaciones cada seis meses suele liberar entre 10% y 20% de este rubro.'},
+ {t:'Cuotas escolares y formación',a:700,d:'Colegiaturas, materiales y cuotas de capacitación del periodo.',
+  n:'<strong>Gasto o inversión.</strong> La formación es de los pocos egresos con retorno documentado sobre el ingreso futuro. Contabilizarlo como inversión cambia el criterio con que se decide.'},
+ {t:'Salud y medicamentos preventivos',a:430,d:'Consultas de control, medicamentos y estudios de rutina.',
+  n:'<strong>Prevención frente a contingencia.</strong> El gasto preventivo es predecible y modesto; su ausencia produce imprevistos de magnitud varias veces mayor.'},
+];
+
+// ═══ IMPREVISTOS ═══
+const RIESGOS=[
+ {t:'Atención hospitalaria de urgencia',a:1150,d:'Ingreso a urgencias con estudios de gabinete. Sin cobertura vigente, la erogación es directa.',
+  n:'<strong>Contingencia de mayor frecuencia.</strong> El gasto médico imprevisto encabeza las causas de descapitalización en hogares mexicanos. El fondo de emergencia es su único amortiguador real.'},
+ {t:'Reparación mecánica del vehículo',a:980,d:'Falla en el sistema de frenos que exige intervención inmediata.',
+  n:'<strong>Costo de propiedad.</strong> Los activos físicos tienen mantenimiento estadísticamente predecible. Provisionarlo lo convierte de crisis en gasto planeado.'},
+ {t:'Falla de electrodoméstico mayor',a:620,d:'Descompostura del refrigerador. Reparación no diferible.',
+  n:'<strong>Vida útil y reemplazo.</strong> Todo equipo tiene fecha de falla probable. Reservar una fracción de su valor cada año evita que el reemplazo compita con el ahorro.'},
+ {t:'Reposición de teléfono móvil',a:840,d:'Pérdida del equipo. Reposición y trámites asociados.',
+  n:'<strong>Transferencia de riesgo.</strong> Asegurar lo que no puede reponerse con recursos corrientes es una decisión de eficiencia, no de precaución excesiva.'},
+ {t:'Fuga hidráulica en el domicilio',a:520,d:'Reparación de instalación con daño en muro. Intervención urgente.',
+  n:'<strong>Mantenimiento diferido.</strong> El costo de reparar siempre excede al de prevenir. La postergación no elimina el gasto: lo incrementa y lo vuelve impredecible.'},
+ {t:'Sanción administrativa',a:360,d:'Multa derivada de una inconsistencia en un trámite fiscal.',
+  n:'<strong>Costo de la desinformación.</strong> El error administrativo tiene precio. La asesoría básica suele costar menos que la sanción que previene.'},
+ {t:'Corrección del mercado',a:0,il:0.15,d:'El índice retrocedió 15% en el periodo. El portafolio registra minusvalía no realizada.',
+  n:'<strong>Volatilidad estructural.</strong> Las correcciones son parte del funcionamiento normal del mercado. Liquidar durante el retroceso cristaliza la pérdida; sostener la posición permite la recuperación.'},
+ {t:'Apoyo familiar imprevisto',a:700,d:'Contingencia de un familiar directo que exige apoyo económico inmediato.',
+  n:'<strong>Red de soporte.</strong> El apoyo familiar es un compromiso real que rara vez aparece en los presupuestos. Anticiparlo evita que se financie con deuda.'},
+];
+
+// ═══ EXTRAORDINARIOS ═══
+const EXTRAS=[
+ {t:'Cumpleaños — obsequio en efectivo',a:600,d:'Es tu cumpleaños. Familiares y amigos te obsequian efectivo por $600.',
+  n:'<strong>Ingreso no recurrente.</strong> El dinero recibido como obsequio se consume casi íntegramente en la mayoría de los casos, precisamente por percibirse como excedente. Es el momento óptimo para incrementar posiciones.'},
+ {t:'Aguinaldo proporcional',a:650,d:'Pago proporcional de aguinaldo correspondiente al periodo laborado.',
+  n:'<strong>Prestación de ley.</strong> El aguinaldo es previsible con meses de anticipación, lo que permite asignarlo antes de recibirlo. Presupuestar el ingreso extraordinario es lo que impide que se evapore.'},
+ {t:'Devolución fiscal anual',a:420,d:'Resolución favorable de la declaración anual. Saldo devuelto por la autoridad.',
+  n:'<strong>Planeación fiscal.</strong> Conocer las deducciones aplicables genera devoluciones que con frecuencia exceden el costo de la asesoría que las identifica.'},
+ {t:'Venta de artículos en desuso',a:380,d:'Liquidación de bienes sin uso mediante plataforma de reventa.',
+  n:'<strong>Capital inmovilizado.</strong> Los bienes sin uso son capital estacionado. Convertirlos en efectivo productivo es una de las fuentes de liquidez más subestimadas.'},
+ {t:'Bono por productividad',a:550,d:'Reconocimiento por cumplimiento de objetivos del periodo.',
+  n:'<strong>Asignación de excedente.</strong> Criterio operativo ante ingreso no recurrente: la mitad se destina a construir patrimonio, la otra mitad a uso discrecional. Consumir el total anula el beneficio.'},
+ {t:'Expansión del mercado',a:0,boom:0.14,d:'Ciclo alcista en el periodo. Las posiciones del portafolio registran apreciación extraordinaria.',
+  n:'<strong>Ciclos de mercado.</strong> Las fases expansivas recompensan la permanencia. La evidencia empírica favorece de forma consistente la disciplina sobre el intento de anticipar el mercado.'},
+];
+
+// ═══ CAPACITACIÓN ═══
+const CAPS=[
+ {t:'Taller de habilidades digitales',cost:500,gain:150,dur:'16 horas · modalidad en línea',
+  d:'Ofimática avanzada, análisis de datos básico y herramientas de productividad. Certificado con validez curricular.',
+  n:'<strong>Formación de ciclo corto.</strong> Las capacitaciones breves y específicas suelen tener el mejor cociente entre costo y retorno: se amortizan rápido y el conocimiento es aplicable de inmediato. Su límite es que también son fáciles de replicar, de modo que el diferencial competitivo se erosiona con el tiempo.'},
+ {t:'Curso de especialización técnica',cost:750,gain:210,dur:'40 horas · fines de semana',
+  d:'Profundización en el área técnica de tu actividad, con proyecto aplicado y evaluación por competencias.',
+  n:'<strong>Especialización aplicada.</strong> El retorno de la formación técnica se materializa cuando existe demanda verificable en el mercado laboral. Antes de inscribirte, conviene comprobar que la competencia adquirida aparece efectivamente en las vacantes de tu sector.'},
+ {t:'Diplomado en gestión y liderazgo',cost:1250,gain:380,dur:'120 horas · seis meses',
+  d:'Formación en administración de equipos, planeación y toma de decisiones. Requiere dedicación sostenida.',
+  n:'<strong>Costo de oportunidad del tiempo.</strong> El desembolso monetario es solo una parte: seis meses de dedicación tienen un valor que rara vez se contabiliza. La decisión correcta pondera ambos costos contra el incremento esperado de ingreso.'},
+ {t:'Certificación profesional acreditada',cost:1900,gain:620,dur:'Examen + preparación',
+  d:'Acreditación reconocida por organismo certificador. Vigencia de tres años, renovable.',
+  n:'<strong>Señalización en el mercado.</strong> Las certificaciones funcionan como señal verificable de competencia frente a empleadores que no pueden observar tu desempeño directamente. Su retorno es alto, pero se concentra en sectores donde la acreditación es requisito y no adorno.'},
+ {t:'Programa de segundo idioma',cost:1500,gain:450,dur:'Doce meses · nivel intermedio',
+  d:'Formación estructurada hasta nivel intermedio con certificación internacional al concluir.',
+  n:'<strong>Retorno de horizonte largo.</strong> El idioma no produce incremento inmediato de ingreso: abre el acceso a un mercado laboral más amplio en el mediano plazo. Es la inversión formativa de amortización más lenta y, con frecuencia, de mayor efecto acumulado.'},
+ {t:'Certificación en herramientas de análisis',cost:1050,gain:330,dur:'60 horas · autoadministrado',
+  d:'Manejo profesional de plataformas de análisis y visualización de datos, con proyecto final acreditable.',
+  n:'<strong>Competencia transversal.</strong> Las habilidades analíticas son valoradas en prácticamente todos los sectores, lo que reduce el riesgo de que la inversión pierda vigencia si cambias de industria.'},
+];
+
+const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+
+// ═══════ STATE ═══════
+let G={},rollTimer=null;
+function initState(){
+  G={turn:0,pos:0,cash:START,savings:0,invValue:0,invBasis:0,debt:0,decMode:null,savCapacity:0,
+     noBackup:0,totWithdrawn:0,realizedPnL:0,capacityTotal:0,tick:null,
+     salaryBonus:0,trainSpend:0,trainCount:0,trainReturn:0,quizPenalty:0,pendingRisk:null,
+     riskSav:0,riskInv:0,riskCash:0,usedC:[],
+     pIncome:0,pExpense:0,totIncome:START,totExpense:0,
+     totSaved:0,totInvested:0,totImpulse:0,totLiving:0,totRisk:0,
+     impulseTaken:0,impulseDeclined:0,impulseAvoided:0,
+     quizOK:0,quizN:0,usedQ:[],usedO:[],
+     hist:[{n:0,net:START,s:0,i:0}],log:[],curOffer:null};
+}
+
+// ═══════ HELPERS ═══════
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Math.max(0,Math.round(n)).toLocaleString('es-MX');
+const fmtS=n=>(n<0?'−$':'$')+Math.abs(Math.round(n)).toLocaleString('es-MX');
+const pad=n=>String(n).padStart(2,'0');
+function pick(arr,used){
+  let avail=arr.map((_,i)=>i).filter(i=>!used.includes(i));
+  if(!avail.length){used.length=0;avail=arr.map((_,i)=>i);}
+  const i=avail[Math.floor(Math.random()*avail.length)];
+  used.push(i);return arr[i];
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');window.scrollTo(0,0);
+}
+function log(msg,type='info'){
+  G.log.unshift({msg,type});if(G.log.length>26)G.log.pop();
+  $('feed').innerHTML=G.log.map(l=>`<div class="fitem ${l.type}">${l.msg}</div>`).join('');
+}
+function renderDie(n){
+  $('die').innerHTML=Array.from({length:9},(_,i)=>`<span class="pip ${PIPS[n].includes(i)?'on':''}"></span>`).join('');
+}
+function renderBoard(){
+  $('board').innerHTML=SPACES.map((t,i)=>{
+    const T=TYPES[t];
+    return `<div class="node ${i===G.pos?'here':''}"><span class="nidx">${pad(i)}</span>
+      <span class="ncode" style="color:${i===G.pos?'var(--acid)':T.color}">${T.code}</span>
+      <span class="nbar" style="background:${T.color};opacity:${i===G.pos?1:.4}"></span></div>`;}).join('');
+}
+function renderKey(){
+  const ks=[['inc','Auto'],['gas','Auto'],['sav','Decides'],['ofr','Decides'],['rsk','Decides'],['inv','Decides'],['ret','Decides'],['cap','Decides'],['ext','Auto']];
+  $('key-list').innerHTML=ks.map(([t,m])=>{
+    const T=TYPES[t];
+    return `<div class="key-item"><span class="key-swatch" style="background:${T.color}"></span>${T.code} · ${T.cat}<span class="key-auto">${m}</span></div>`;
+  }).join('');
+}
+function setNodePanel(t,i){
+  const T=TYPES[t];
+  $('node-panel').style.setProperty('--np-color',T.color);
+  $('np-code').textContent=T.code;$('np-cat').textContent=T.cat;
+  $('np-name').textContent=NAMES[i];$('np-desc').textContent=NODE_DESC[t];
+}
+function netWorth(){return Math.max(0,G.cash)+G.savings+G.invValue-G.debt;}
+function updateDash(){
+  const net=netWorth();
+  const pct=(net-START)/START*100;
+  $('nw').textContent=fmt(net);
+  $('nw-delta').textContent=(pct>=0?'▲ +':'▼ ')+pct.toFixed(1)+'% desde inicio';
+  $('nw-delta').style.color=pct>=0?'var(--up)':'var(--down)';
+  $('l-cash').textContent=fmt(G.cash);
+  $('l-sav').textContent=fmt(G.savings);
+  $('l-debt').textContent=fmt(G.debt);
+  $('l-sal').textContent=fmt(SALARY+G.salaryBonus)+(G.salaryBonus>0?' ▲':'');
+  $('debt-row').style.display=G.debt>0?'flex':'none';
+  renderInv();
+  $('p-inc').textContent='+'+fmt(G.pIncome);
+  $('p-exp').textContent='−'+fmt(G.pExpense);
+  const diff=G.pIncome-G.pExpense;
+  $('p-net').textContent=fmtS(diff);
+  $('p-net').style.color=diff>0?'var(--acid)':diff<0?'var(--down)':'var(--dim)';
+  const tot=Math.max(1,Math.max(0,G.cash)+G.savings+G.invValue);
+  const c=Math.round(Math.max(0,G.cash)/tot*100),s=Math.round(G.savings/tot*100),v=Math.round(G.invValue/tot*100);
+  $('af-cash').style.width=c+'%';$('ap-cash').textContent=c+'%';
+  $('af-sav').style.width=s+'%';$('ap-sav').textContent=s+'%';
+  $('af-inv').style.width=v+'%';$('ap-inv').textContent=v+'%';
+}
+function renderInv(){
+  $('l-inv').textContent=fmt(G.invValue);
+  const sub=$('inv-sub');
+  if(G.invValue<=0.5){sub.textContent='Sin posiciones abiertas';sub.style.color='var(--dim)';return;}
+  const pnl=G.invValue-G.invBasis;
+  const pct=G.invBasis>0?(pnl/G.invBasis*100):0;
+  sub.textContent=(pnl>=0?'\u25b2 +':'\u25bc \u2212')+fmt(Math.abs(pnl))+'  \u00b7  '+(pnl>=0?'+':'\u2212')+Math.abs(pct).toFixed(2)+'% sobre capital asignado';
+  sub.style.color=pnl>=0?'var(--up)':'var(--down)';
+}
+function startTicker(){
+  if(G.tick)clearInterval(G.tick);
+  G.tick=setInterval(()=>{
+    if(G.invValue>0.5){
+      const drift=0.00016+(Math.random()-0.44)*0.00075;
+      G.invValue=Math.max(0,G.invValue*(1+drift));
+      renderInv();
+      const el=$('nw');if(el)el.textContent=fmt(netWorth());
+    }
+  },1000);
+}
+function stopTicker(){if(G.tick){clearInterval(G.tick);G.tick=null;}}
+function updateStrip(){
+  $('tstrip').innerHTML=Array.from({length:TOTAL_NODES},(_,i)=>
+    `<div class="tseg ${i<G.turn?'done':i===G.turn?'now':''}"></div>`).join('');
+  $('t-num').textContent=pad(G.turn);
+}
+function hideAll(){
+  ['evt','quiz','offer','dec','src'].forEach(id=>$(id).classList.remove('show'));
+  $('btn-next').classList.remove('show');
+}
+function card(type,title,desc,delta,deltaLbl,color,note,calcHTML){
+  const T=TYPES[type];
+  $('evt').style.setProperty('--evt-color',color);
+  $('evt-cat').textContent=T.cat;$('evt-cat').style.color=color;
+  $('evt-code').textContent='NODO '+T.code+' · '+pad(G.turn)+'/25';
+  $('evt-title').textContent=title;$('evt-desc').textContent=desc;
+  $('evt-calc').innerHTML=calcHTML||'';
+  $('evt-delta').innerHTML=`<span class="lbl">${deltaLbl}</span>${delta}`;
+  $('evt-delta').style.color=color;
+  $('evt-note').innerHTML=note;
+  $('evt').classList.add('show');
+}
+function done(){
+  $('btn-next').textContent=(G.turn>=TOTAL_NODES)?'Finalizar y mostrar resultados':'Continuar';
+  $('btn-next').classList.add('show');$('btn-roll').disabled=true;
+}
+
+// ═══════ FLOW ═══════
+function startGame(){
+  initState();showScreen('screen-game');
+  renderBoard();renderKey();updateDash();updateStrip();
+  setNodePanel('start',0);renderDie(1);
+  log('<b>SESIÓN INICIADA</b> · Disponible $3,000','info');
+  hideAll();$('btn-roll').disabled=false;$('dice-out').textContent='—';startTicker();
+}
+
+function rollDice(){
+  if($('btn-roll').disabled)return;
+  hideAll();$('btn-roll').disabled=true;
+  const die=$('die');die.classList.add('roll');
+  $('dice-out').textContent='Girando…';
+  // 3 segundos de animación con caras aleatorias
+  let t=0;
+  rollTimer=setInterval(()=>{renderDie(Math.ceil(Math.random()*6));t+=110;},110);
+  setTimeout(()=>{
+    clearInterval(rollTimer);die.classList.remove('roll');
+    const d=Math.ceil(Math.random()*6);
+    renderDie(d);
+    G.turn++;
+    G.pos=(G.pos+d)%SPACES.length;
+    $('dice-out').textContent=d+' → nodo '+pad(G.pos);
+    renderBoard();updateStrip();
+    const type=SPACES[G.pos];
+    setNodePanel(type,G.pos);
+    log(`<b>N${pad(G.turn)}</b> · dado ${d} → nodo ${pad(G.pos)} ${TYPES[type].code}`,'info');
+    setTimeout(()=>handleNode(type),400);
+  },3000);
+}
+
+function handleNode(t){
+  ({inc:doINC,gas:doGAS,sav:doSAV,ofr:doOFR,rsk:doRSK,inv:doINV,ret:doRET,cap:doCAP,ext:doEXT,cic:doCIC}[t]||done)();
+}
+
+// ── INGRESOS + REACTIVO ──
+function doINC(){
+  const pay=SALARY+G.salaryBonus;
+  G.cash+=pay;G.pIncome+=pay;G.totIncome+=pay;
+  if(G.salaryBonus>0)G.trainReturn+=G.salaryBonus;
+  log(`<b>INC</b> \u00b7 Sueldo acreditado +${fmt(pay)}${G.salaryBonus>0?' (incl. capacitaci\u00f3n)':''}`,'up');
+  const cal=G.salaryBonus>0?`<div class="calc">
+    <div class="calc-row"><span class="k">Sueldo base</span><span>+${fmt(SALARY)}</span></div>
+    <div class="calc-row"><span class="k">Incremento por capacitaci\u00f3n</span><span style="color:var(--acid)">+${fmt(G.salaryBonus)}</span></div>
+    <div class="calc-row"><span class="k">Percepci\u00f3n del nodo</span><span style="color:var(--up)">+${fmt(pay)}</span></div>
+  </div>`:'';
+  card('inc','Sueldo acreditado',
+    `Se acreditan ${fmt(pay)} al disponible. Responde el reactivo: el acierto suma ${fmt(QUIZ_BONUS)}, el error los descuenta.`,
+    '+'+fmt(pay),'Percepci\u00f3n ordinaria','var(--acid)',
+    '<strong>Págate primero.</strong> El momento de decidir el destino del ingreso es antes de que llegue, no después. Quien asigna el ahorro al recibir el sueldo lo sostiene; quien espera al final del periodo, ahorra lo que sobra, que rara vez es algo.',cal);
+  updateDash();
+  setTimeout(showQuiz,450);
+}
+function showQuiz(){
+  const q=pick(QUIZ,G.usedQ);G.quizN++;
+  $('qz-count').textContent='Reactivo '+pad(G.quizN)+' \u00b7 Acierto +'+fmt(QUIZ_BONUS)+' \u00b7 Error \u2212'+fmt(QUIZ_BONUS);
+  $('qz-q').textContent=q.q;
+  $('qz-opts').innerHTML=q.o.map((o,i)=>
+    `<button class="qz-opt" data-i="${i}" onclick="answerQuiz(${i},${q.c})">
+      <span class="lt">${String.fromCharCode(65+i)}</span><span>${o}</span></button>`).join('');
+  $('qz-tag').textContent='Reactivo de cultura financiera';
+  $('quiz').classList.add('show');
+}
+function answerQuiz(i,c){
+  const q=QUIZ[G.usedQ[G.usedQ.length-1]];
+  document.querySelectorAll('.qz-opt').forEach(b=>{
+    b.disabled=true;
+    const idx=+b.dataset.i;
+    if(idx===c)b.classList.add('right');
+    else if(idx===i)b.classList.add('wrong');
+  });
+  const ok=(i===c);
+  if(ok){
+    G.cash+=QUIZ_BONUS;G.pIncome+=QUIZ_BONUS;G.totIncome+=QUIZ_BONUS;G.quizOK++;
+    log(`<b>INC</b> · Reactivo correcto · bono +${fmt(QUIZ_BONUS)}`,'up');
+  } else {
+    const fc=Math.min(QUIZ_BONUS,Math.max(0,G.cash));
+    G.cash-=fc; const un=QUIZ_BONUS-fc; if(un>0)G.debt+=un;
+    G.pExpense+=QUIZ_BONUS;G.totExpense+=QUIZ_BONUS;G.quizPenalty+=QUIZ_BONUS;
+    log(`<b>INC</b> \u00b7 Reactivo incorrecto \u00b7 penalizaci\u00f3n \u2212${fmt(QUIZ_BONUS)}`,'down');
+  }
+  updateDash();
+  setTimeout(()=>{
+    card('inc',ok?'Respuesta correcta \u2014 bono liberado':'Respuesta incorrecta \u2014 penalizaci\u00f3n aplicada',
+      q.e, ok?'+'+fmt(QUIZ_BONUS):'\u2212'+fmt(QUIZ_BONUS), ok?'Bono de conocimiento':'Descuento por error',
+      ok?'var(--up)':'var(--down)',
+      ok?'<strong>El conocimiento tiene retorno medible.</strong> Cada concepto financiero dominado se traduce en decisiones mejor calibradas: menos comisiones pagadas, mejores tasas contratadas, menos productos inadecuados adquiridos.'
+        :'<strong>La desinformaci\u00f3n se cobra.</strong> El descuento no es una convenci\u00f3n del juego: replica lo que ocurre fuera de \u00e9l. Desconocer c\u00f3mo opera una tasa, un CAT o un rendimiento real se paga en comisiones evitables, cr\u00e9ditos mal contratados y productos inadecuados. La factura llega siempre, solo que sin etiqueta.');
+    done();
+  },700);
+}
+
+// ── GASTOS CORRIENTES ──
+function doGAS(){
+  const g=pick(GASTOS,G.usedO.gas||(G.usedO.gas=[]))||GASTOS[0];
+  const paid=Math.min(g.a,Math.max(0,G.cash));
+  G.cash-=paid;G.pExpense+=g.a;G.totExpense+=g.a;G.totLiving+=g.a;
+  log(`<b>GAS</b> · ${g.t} −${fmt(g.a)}`,'warn');
+  card('gas',g.t,g.d,'−'+fmt(g.a),'Cargo automático','var(--warn)',g.n);
+  updateDash();done();
+}
+
+// ── AHORRO (decisión del jugador) ──
+function savCalcHTML(diff){
+  return `<div class="calc">
+    <div class="calc-row"><span class="k">Ingresos del periodo</span><span style="color:var(--up)">+${fmt(G.pIncome)}</span></div>
+    <div class="calc-row"><span class="k">Gastos del periodo</span><span style="color:var(--down)">\u2212${fmt(G.pExpense)}</span></div>
+    <div class="calc-row"><span class="k">Diferencia = capacidad de ahorro</span><span style="color:${diff>0?'var(--acid)':'var(--down)'}">${fmtS(diff)}</span></div>
+  </div>`;
+}
+function doSAV(){
+  const diff=G.pIncome-G.pExpense;
+  const calc=savCalcHTML(diff);
+  if(G.cash<50){
+    log('<b>SAV</b> \u00b7 Sin efectivo disponible \u00b7 ahorro $0','down');
+    card('sav','Corte de ahorro \u2014 sin liquidez',
+      'No hay efectivo disponible para trasladar al fondo. El corte se cierra sin movimiento.',
+      '$0','Sin traslado','var(--down)',
+      '<strong>La decisi\u00f3n desaparece cuando no queda margen.</strong> Ahorrar es una elecci\u00f3n solo mientras existe excedente; agotado el efectivo, la conducta financiera deja de tener grados de libertad. Por eso la palanca real opera antes de este nodo, en cada egreso aceptado o declinado.',
+      calc);
+    G.pIncome=0;G.pExpense=0;updateDash();done();return;
+  }
+  G.decMode='sav';G.savCapacity=diff;
+  $('dec').style.setProperty('--dec-color','var(--up)');
+  $('dec-title').textContent='Corte de ahorro \u2014 decisi\u00f3n de traslado';
+  $('dec-desc').textContent=`Durante el periodo ingresaron ${fmt(G.pIncome)} y salieron ${fmt(G.pExpense)}. Define el monto que trasladas al fondo de ahorro. La capacidad calculada es la referencia, no un l\u00edmite: puedes quedarte por debajo o financiar el traslado con efectivo previo.`;
+  $('dec-calc').innerHTML=calc;
+  $('slider').max=Math.floor(G.cash);
+  $('slider').value=Math.max(0,Math.min(Math.floor(diff),Math.floor(G.cash)));
+  $('r-max').textContent=fmt(G.cash);
+  $('dec-hint').innerHTML=`Capacidad calculada del periodo: <b style="color:${diff>0?'var(--acid)':'var(--down)'}">${fmtS(diff)}</b> \u00b7 Disponible: <b>${fmt(G.cash)}</b>`;
+  $('btn-exec').textContent='Trasladar al fondo';
+  updateSlider();$('dec').classList.add('show');
+}
+function confirmSave(amt){
+  const cap=G.savCapacity, calc=savCalcHTML(cap);
+  if(cap>0)G.capacityTotal+=cap;
+  G.cash-=amt;G.savings+=amt;G.totSaved+=amt;
+  G.pIncome=0;G.pExpense=0;
+  $('dec').classList.remove('show');
+  log(`<b>SAV</b> \u00b7 Trasladados ${fmt(amt)} al fondo`,'up');
+  let note;
+  if(cap>0&&amt>cap){
+    note='<strong>Ahorro por encima de la capacidad del periodo.</strong> El excedente sali\u00f3 de efectivo acumulado en cortes anteriores. Es una decisi\u00f3n v\u00e1lida y a menudo deseable, pero conviene verificar que la liquidez restante alcance para los gastos corrientes e imprevistos que vienen: un fondo robusto financiado con el dinero de la renta no es ahorro, es aplazamiento.';
+  } else if(cap>0&&amt<cap){
+    note=`<strong>Capacidad sin utilizar: ${fmt(cap-amt)}.</strong> El periodo gener\u00f3 un excedente mayor al que trasladaste. Ese remanente permanece en efectivo, donde no rinde y queda expuesto a los pr\u00f3ximos nodos de gasto. La brecha entre lo que se puede ahorrar y lo que efectivamente se ahorra es el espacio donde se pierde la mayor parte del patrimonio potencial.`;
+  } else if(cap<=0){
+    note='<strong>Traslado sin excedente del periodo.</strong> Los gastos igualaron o superaron a los ingresos, de modo que este ahorro provino de efectivo previo. Sostener el fondo cuando el flujo del periodo no lo permite es una se\u00f1al de disciplina, pero tambi\u00e9n de que la estructura de gasto requiere revisi\u00f3n.';
+  } else {
+    note='<strong>Traslado alineado con la capacidad del periodo.</strong> Ahorrar exactamente lo que el flujo permite es el patr\u00f3n m\u00e1s sostenible: no compromete la liquidez operativa ni deja excedente ocioso. Repetido con constancia, este es el mecanismo que construye patrimonio.';
+  }
+  card('sav','Corte de ahorro \u2014 traslado ejecutado',
+    `Se trasladaron ${fmt(amt)} al fondo, que acumula ${fmt(G.savings)}. El periodo se cierra y los contadores de ingresos y gastos vuelven a cero.`,
+    '+'+fmt(amt),'Traslado al fondo','var(--up)',note,calc);
+  updateDash();done();
+}
+function skipSave(){
+  const cap=G.savCapacity, calc=savCalcHTML(cap);
+  if(cap>0)G.capacityTotal+=cap;
+  G.pIncome=0;G.pExpense=0;
+  $('dec').classList.remove('show');
+  log('<b>SAV</b> \u00b7 Corte omitido \u00b7 ahorro $0','warn');
+  card('sav','Corte de ahorro \u2014 sin traslado',
+    cap>0
+      ? `El periodo gener\u00f3 una capacidad de ${fmt(cap)} que no se traslad\u00f3 al fondo. El importe permanece en efectivo y queda disponible para los pr\u00f3ximos nodos de gasto.`
+      : 'Los gastos del periodo igualaron o superaron a los ingresos. No hubo capacidad de ahorro y el corte se cierra sin movimiento.',
+    '$0','Sin traslado','var(--down)',
+    cap>0
+      ? '<strong>Postergar el ahorro es gastarlo.</strong> El excedente que no se traslada rara vez sobrevive al periodo siguiente: permanece en la cuenta corriente, sin rendimiento y al alcance de la pr\u00f3xima promoci\u00f3n. Automatizar el traslado el mismo d\u00eda del ingreso es el \u00fanico mecanismo que ha demostrado sostenerse.'
+      : '<strong>Aqu\u00ed se hace visible el mecanismo.</strong> No hubo nada que decidir porque no hubo excedente que trasladar. Cada oferta aceptada y cada gasto no contenido durante el periodo se manifiestan exactamente en este punto, no como advertencia sino como una cifra en cero.',
+    calc);
+  updateDash();done();
+}
+
+// ── OFERTAS (decisión) ──
+function doOFR(){
+  const o=pick(OFFERS,G.usedO.ofr||(G.usedO.ofr=[]))||OFFERS[0];
+  G.curOffer=o;
+  const disc=Math.round((1-o.now/o.was)*100);
+  $('of-banner').textContent=OFFER_BANNER;
+  $('of-flag').textContent=disc+'% DE DESCUENTO';
+  $('of-title').textContent=o.t;$('of-desc').textContent=o.d;
+  $('of-was').textContent=fmt(o.was);$('of-now').textContent=fmt(o.now);
+  $('of-save').textContent='Ahorras '+fmt(o.was-o.now)+' respecto al precio de lista';
+  $('of-meta').textContent=o.meta;
+  $('btn-buy').disabled=(G.cash<o.now);
+  $('btn-buy').textContent=(G.cash<o.now)?'Efectivo insuficiente':'Aprovechar la oferta';
+  $('offer').classList.add('show');
+}
+function acceptOffer(){
+  const o=G.curOffer;
+  G.cash-=o.now;G.pExpense+=o.now;G.totExpense+=o.now;G.totImpulse+=o.now;G.impulseTaken++;
+  $('offer').classList.remove('show');
+  log(`<b>OFR</b> · ${o.t} adquirido −${fmt(o.now)}`,'down');
+  const calc=`<div class="calc">
+    <div class="calc-row"><span class="k">Ahorro anunciado por el comercio</span><span style="color:var(--dim)">${fmt(o.was-o.now)}</span></div>
+    <div class="calc-row"><span class="k">Salida real de tu efectivo</span><span style="color:var(--down)">−${fmt(o.now)}</span></div>
+    <div class="calc-row"><span class="k">Efecto en tu próximo corte SAV</span><span style="color:var(--down)">−${fmt(o.now)}</span></div>
+  </div>`;
+  card('ofr',o.t+' — adquirido',
+    `Se descontaron ${fmt(o.now)} del efectivo y se registraron como gasto del periodo. Este importe se restará de tus ingresos en el próximo corte de ahorro.`,
+    '−'+fmt(o.now),'Egreso registrado','var(--down)',o.n,calc);
+  updateDash();done();
+}
+function declineOffer(){
+  const o=G.curOffer;
+  G.impulseDeclined++;G.impulseAvoided+=o.now;
+  $('offer').classList.remove('show');
+  log(`<b>OFR</b> · Oferta declinada · ${fmt(o.now)} preservados`,'up');
+  const calc=`<div class="calc">
+    <div class="calc-row"><span class="k">Efectivo preservado</span><span style="color:var(--up)">+${fmt(o.now)}</span></div>
+    <div class="calc-row"><span class="k">Capacidad de ahorro protegida</span><span style="color:var(--acid)">+${fmt(o.now)}</span></div>
+    <div class="calc-row"><span class="k">Valor a 10 años al 10% anual</span><span style="color:var(--up)">${fmt(o.now*Math.pow(1.10,10))}</span></div>
+  </div>`;
+  card('ofr','Oferta declinada',
+    `No se realizó el desembolso. Los ${fmt(o.now)} permanecen en efectivo y se conservarán íntegros como capacidad de ahorro en el próximo corte SAV.`,
+    '+'+fmt(o.now),'Efectivo preservado','var(--up)',
+    '<strong>El único ahorro verificable es el que no se gasta.</strong> El descuento reduce el precio, no el egreso. Al declinar, el importe completo permanece disponible y, trasladado al fondo o al portafolio, se convierte en el capital que sí genera rendimiento.',
+    calc);
+  updateDash();done();
+}
+
+// ── IMPREVISTOS ──
+function doRSK(){
+  const e=pick(RIESGOS,G.usedO.rsk||(G.usedO.rsk=[]))||RIESGOS[0];
+  if(e.il&&G.invValue>0){
+    const l=Math.round(G.invValue*e.il);G.invValue-=l;
+    log(`<b>RSK</b> · Corrección de mercado −${fmt(l)}`,'down');
+    card('rsk',e.t,e.d,'−'+fmt(l),'Minusvalía no realizada','var(--alt)',e.n);
+  } else if(e.il){
+    log('<b>RSK</b> · Corrección de mercado · sin exposición','warn');
+    card('rsk',e.t,'El índice retrocedió 15%, pero no mantienes posiciones en el portafolio, de modo que no registras minusvalía.',
+      '$0','Sin exposición al mercado','var(--dim)',
+      '<strong>No participar también tiene costo.</strong> Quedar fuera del mercado evita las correcciones, pero también las recuperaciones y el rendimiento acumulado. Ausencia de pérdida no equivale a preservación de patrimonio: la inflación sigue actuando.');
+  } else {
+    G.pendingRisk=e;
+    if(G.savings<1&&G.invValue<1){ payRisk('cash',true); return; }
+    $('src').style.setProperty('--src-c','var(--alt)');
+    $('src-title').textContent='\u00bfCon qu\u00e9 recurso cubres la contingencia?';
+    $('src-desc').innerHTML=`<b style="color:var(--txt)">${e.t}</b> \u2014 ${e.d}<br/><br/>Importe a cubrir: <b style="color:var(--alt)">${fmt(e.a)}</b>. Elige de d\u00f3nde sale el dinero. Si el recurso elegido no alcanza, el faltante se descontar\u00e1 del disponible.`;
+    let h='';
+    if(G.savings>=1) h+=`<button class="src-opt" onclick="payRisk('sav')">
+      <span class="sc-l"><span class="sc-n">Retirar de Apartados</span>
+      <span class="sc-d">Es la funci\u00f3n del respaldo: absorber contingencias sin tocar el gasto corriente ni liquidar inversiones</span></span>
+      <span class="sc-v" style="color:var(--up)">${fmt(G.savings)}</span></button>`;
+    if(G.savings>=1&&G.invValue>=1) h+=`<button class="src-opt" onclick="payRisk('both')">
+      <span class="sc-l"><span class="sc-n">Combinar Apartados e Inversi\u00f3n</span>
+      <span class="sc-d">Toma primero de apartados y completa el faltante liquidando posiciones: usa todo el respaldo disponible antes de tocar el disponible</span></span>
+      <span class="sc-v" style="color:var(--acid)">${fmt(G.savings+G.invValue)}</span></button>`;
+    if(G.invValue>=1) h+=`<button class="src-opt" onclick="payRisk('inv')">
+      <span class="sc-l"><span class="sc-n">Retirar de Inversi\u00f3n</span>
+      <span class="sc-d">Liquida posiciones y realiza la ganancia o la p\u00e9rdida acumulada sobre la parte vendida</span></span>
+      <span class="sc-v" style="color:var(--info)">${fmt(G.invValue)}</span></button>`;
+    h+=`<button class="src-opt" onclick="payRisk('cash')">
+      <span class="sc-l"><span class="sc-n">Cubrir con Disponible</span>
+      <span class="sc-d">Consume la liquidez destinada al gasto corriente del periodo</span></span>
+      <span class="sc-v" style="color:var(--acid)">${fmt(Math.max(0,G.cash))}</span></button>`;
+    $('src-opts').innerHTML=h;
+    $('src').classList.add('show');
+    return;
+  }
+  updateDash();done();
+}
+
+function payRisk(src,forced){
+  const e=G.pendingRisk;
+  let rem=e.a, fromSav=0, fromInv=0, realized=0;
+  if(src==='sav'||src==='both'){ fromSav=Math.min(rem,G.savings); G.savings-=fromSav; rem-=fromSav; G.riskSav+=fromSav; }
+  if((src==='inv'||src==='both')&&rem>0&&G.invValue>0){
+    fromInv=Math.min(rem,G.invValue);
+    const ratio=fromInv/G.invValue, basisOut=G.invBasis*ratio;
+    realized=fromInv-basisOut;
+    G.invValue-=fromInv; G.invBasis-=basisOut;
+    G.realizedPnL+=realized; G.totWithdrawn+=fromInv; G.riskInv+=fromInv;
+    rem-=fromInv;
+  }
+  const fromCash=Math.min(rem,Math.max(0,G.cash));
+  G.cash-=fromCash; rem-=fromCash; G.riskCash+=fromCash;
+  const uncovered=rem; if(uncovered>0)G.debt+=uncovered;
+  const noBackup=(fromCash>0||uncovered>0);
+  if(noBackup)G.noBackup++;
+  G.pExpense+=e.a; G.totExpense+=e.a; G.totRisk+=e.a;
+  $('src').classList.remove('show');
+  log(`<b>RSK</b> \u00b7 ${e.t} \u2212${fmt(e.a)}${noBackup?' \u00b7 SIN RESPALDO':''}`,'down');
+  let alert='';
+  if(noBackup){
+    alert=`<div class="alert-bar"><span class="ab-title">No cuenta con Respaldo Econ\u00f3mico</span>
+      <span class="ab-txt">${forced?'No hay saldo en apartados ni en inversi\u00f3n para absorber esta contingencia.':'El recurso elegido no alcanz\u00f3 a cubrir el importe completo.'} El faltante se descont\u00f3 directamente del disponible${uncovered>0?', y lo que tampoco alcanz\u00f3 qued\u00f3 registrado como deuda':''}.</span></div>`;
+  }
+  const calc=`<div class="calc">
+    <div class="calc-row"><span class="k">Cubierto con apartados</span><span style="color:${fromSav>0?'var(--up)':'var(--dim)'}">\u2212${fmt(fromSav)}</span></div>
+    <div class="calc-row"><span class="k">Cubierto con inversi\u00f3n</span><span style="color:${fromInv>0?'var(--info)':'var(--dim)'}">\u2212${fmt(fromInv)}</span></div>
+    <div class="calc-row"><span class="k">Cubierto con disponible</span><span style="color:${fromCash>0?'var(--down)':'var(--dim)'}">\u2212${fmt(fromCash)}</span></div>
+    ${uncovered>0?`<div class="calc-row"><span class="k">Sin cobertura \u00b7 deuda contra\u00edda</span><span style="color:var(--down)">${fmt(uncovered)}</span></div>`:''}
+    <div class="calc-row"><span class="k">Saldo restante en apartados</span><span style="color:var(--up)">${fmt(G.savings)}</span></div>
+  </div>`;
+  let note;
+  if(noBackup){
+    note='<strong>Para esto existen los apartados.</strong> La contingencia no se evita: se amortigua. Cuando el respaldo no alcanza, el gasto migra al disponible \u2014el dinero de la renta y la despensa\u2014 y de ah\u00ed a la deuda. Ese desplazamiento, y no la contingencia en s\u00ed, es lo que deteriora las finanzas personales.';
+  } else if(fromSav>0&&fromInv>0){
+    note=`<strong>Combinaste ambos respaldos.</strong> Los apartados aportaron ${fmt(fromSav)} y el resto se cubri\u00f3 liquidando ${fmt(fromInv)} del portafolio. Recurrir a las dos posiciones antes que al disponible protege el gasto corriente del periodo, pero deja una se\u00f1al clara: el respaldo l\u00edquido era insuficiente para el tama\u00f1o de la contingencia. Reponerlo es prioritario sobre cualquier nueva asignaci\u00f3n a inversi\u00f3n.`;
+  } else if(fromInv>0){
+    note=realized>=0
+      ? `<strong>Liquidaste inversi\u00f3n para cubrir un imprevisto.</strong> Realizaste ${fmt(realized)} de ganancia, pero interrumpiste la capitalizaci\u00f3n sobre ese capital. Cuando el fondo de emergencia no existe, la inversi\u00f3n termina cumpliendo su funci\u00f3n \u2014y perdiendo su horizonte\u2014. Son dos instrumentos distintos, con prop\u00f3sitos distintos.`
+      : `<strong>Liquidaste en minusval\u00eda para cubrir un imprevisto.</strong> Realizaste una p\u00e9rdida de ${fmt(Math.abs(realized))} que hasta ese momento era solo contable. Este es el costo preciso de no tener respaldo: obliga a vender en el momento que decide la contingencia, no en el que conviene al portafolio.`;
+  } else {
+    note='<strong>El respaldo cumpli\u00f3 su funci\u00f3n.</strong> '+e.n;
+  }
+  card('rsk',e.t,e.d,'\u2212'+fmt(e.a),'Contingencia cubierta','var(--alt)',note,alert+calc);
+  updateDash();done();
+}
+
+// ── EXTRAORDINARIOS ──
+function doEXT(){
+  const e=pick(EXTRAS,G.usedO.ext||(G.usedO.ext=[]))||EXTRAS[0];
+  if(e.boom&&G.invValue>0){
+    const g=Math.round(G.invValue*e.boom);G.invValue+=g;
+    log(`<b>EXT</b> · Expansión de mercado +${fmt(g)}`,'up');
+    card('ext',e.t,e.d,'+'+fmt(g),'Apreciación del portafolio','var(--up)',e.n);
+  } else if(e.boom){
+    log('<b>EXT</b> · Expansión de mercado · sin exposición','warn');
+    card('ext',e.t,'El mercado registró una fase alcista, pero no mantienes posiciones en el portafolio y no participaste de la apreciación.',
+      '$0','Sin exposición al mercado','var(--dim)',
+      '<strong>El costo de la ausencia.</strong> Los rendimientos de largo plazo se concentran en un número reducido de sesiones alcistas. Quien no está posicionado cuando ocurren, no las recupera después.');
+  } else {
+    G.cash+=e.a;G.pIncome+=e.a;G.totIncome+=e.a;
+    log(`<b>EXT</b> · ${e.t} +${fmt(e.a)}`,'up');
+    card('ext',e.t,e.d,'+'+fmt(e.a),'Ingreso extraordinario','var(--up)',e.n);
+  }
+  updateDash();done();
+}
+
+// ── INVERSIÓN (decisión) ──
+function doINV(){
+  if(G.cash<100){
+    log('<b>INV</b> · Efectivo insuficiente para asignar','warn');
+    card('inv','Ventana de inversión — sin liquidez',
+      'El efectivo disponible es insuficiente para constituir una posición. La ventana se cierra sin asignación.',
+      '$0','Sin capacidad de asignación','var(--dim)',
+      '<strong>La liquidez precede a la inversión.</strong> No se puede invertir lo que ya se consumió. La secuencia funcional es: contener el gasto, generar excedente, y solo entonces asignar al portafolio.');
+    done();return;
+  }
+  G.decMode='inv';
+  $('dec').style.setProperty('--dec-color','var(--info)');
+  $('dec-title').textContent='Ventana de inversión — asignación';
+  $('dec-desc').textContent=`Disponible: ${fmt(G.cash)}. Define el monto a asignar al portafolio. Rendimiento esperado 4%–14% anualizado, con exposición a corrección de mercado.`;
+  $('dec-calc').innerHTML='';
+  $('dec-hint').innerHTML=`Apartados actuales: <b style="color:var(--up)">${fmt(G.savings)}</b> \u00b7 Inversi\u00f3n actual: <b style="color:var(--info)">${fmt(G.invValue)}</b>`;
+  $('btn-exec').textContent='Ejecutar asignación';
+  $('slider').max=Math.floor(G.cash);$('slider').value=Math.floor(G.cash*0.2);
+  $('r-max').textContent=fmt(G.cash);
+  updateSlider();$('dec').classList.add('show');
+}
+function updateSlider(){
+  const v=parseInt($('slider').value)||0;
+  $('dec-amount').textContent=fmt(v);
+  const base=(G.decMode==='ret')?G.invValue:G.cash;
+  $('dec-pct').textContent=(base>0?Math.round(v/base*100):0)+'% '+(G.decMode==='ret'?'de la inversi\u00f3n':'del disponible');
+}
+function confirmDecision(){
+  const amt=parseInt($('slider').value)||0;
+  if(amt<=0){skipDecision();return;}
+  if(G.decMode==='sav'){confirmSave(amt);return;}
+  if(G.decMode==='ret'){confirmWithdraw(amt);return;}
+  confirmInvest(amt);
+}
+function skipDecision(){
+  if(G.decMode==='sav'){skipSave();return;}
+  if(G.decMode==='ret'){skipWithdraw();return;}
+  skipInvest();
+}
+function confirmInvest(amt){
+  G.cash-=amt;G.invValue+=amt;G.invBasis+=amt;G.totInvested+=amt;
+  $('dec').classList.remove('show');
+  log(`<b>INV</b> · Asignados ${fmt(amt)} al portafolio`,'up');
+  card('inv','Asignación al portafolio',
+    `Se asignaron ${fmt(amt)} a posiciones de mercado. Valor total del portafolio: ${fmt(G.invValue)}.`,
+    '+'+fmt(amt),'Capital asignado','var(--info)',
+    '<strong>Horizonte y rendimiento.</strong> Los índices nacionales e internacionales han rendido históricamente entre 8% y 12% anual en ventanas de diez años o más. El determinante del resultado es la permanencia, no el momento de entrada.');
+  updateDash();done();
+}
+function skipInvest(){
+  $('dec').classList.remove('show');
+  log('<b>INV</b> · Ventana omitida · $0 asignados','warn');
+  card('inv','Ventana de inversión omitida',
+    'No se asignaron recursos al portafolio. El efectivo permanece íntegro, expuesto a la inflación y disponible para los siguientes nodos de gasto.',
+    '$0','Sin asignación','var(--dim)',
+    '<strong>La omisión también es una decisión.</strong> Mantener el capital en efectivo lo deja en la posición de menor rendimiento y mayor exposición al consumo no planificado. La postergación repetida es el patrón más frecuente en perfiles con patrimonio estancado.');
+  done();
+}
+
+// CAPACITACION (decision)
+function doCAP(){
+  const c=pick(CAPS,G.usedC);
+  G.curCap=c;
+  const payback=Math.ceil(c.cost/c.gain);
+  const remINC=Math.max(0,Math.round(5*(TOTAL_NODES-G.turn)/TOTAL_NODES));
+  const ok=G.cash>=c.cost;
+  $('src').style.setProperty('--src-c','var(--acid)');
+  $('src-title').textContent='Oferta de capacitaci\u00f3n \u2014 '+c.t;
+  $('src-desc').innerHTML=`${c.d}<br/><br/><b style="color:var(--txt)">${c.dur}</b> \u00b7 Costo \u00fanico de <b style="color:var(--down)">${fmt(c.cost)}</b> con cargo al disponible, a cambio de <b style="color:var(--acid)">+${fmt(c.gain)}</b> permanentes en cada nodo INC posterior. Se amortiza tras <b>${payback}</b> acreditaciones; quedan aproximadamente <b>${remINC}</b> por delante.`;
+  $('src-opts').innerHTML=`
+    <button class="src-opt" onclick="takeCAP()" ${ok?'':'disabled style="opacity:.4;cursor:not-allowed"'}>
+      <span class="sc-l"><span class="sc-n">${ok?'Inscribirme al programa':'Disponible insuficiente'}</span>
+      <span class="sc-d">${ok?'Reduce el disponible hoy y eleva el ingreso de todos los nodos INC restantes':`Requiere ${fmt(c.cost)} y solo tienes ${fmt(G.cash)}`}</span></span>
+      <span class="sc-v" style="color:var(--down)">\u2212${fmt(c.cost)}</span></button>
+    <button class="src-opt" onclick="skipCAP()">
+      <span class="sc-l"><span class="sc-n">Declinar por ahora</span>
+      <span class="sc-d">Conserva la liquidez y mantiene el ingreso en su nivel actual</span></span>
+      <span class="sc-v" style="color:var(--dim)">$0</span></button>`;
+  $('src').classList.add('show');
+}
+function takeCAP(){
+  const c=G.curCap;
+  G.cash-=c.cost;G.pExpense+=c.cost;G.totExpense+=c.cost;
+  G.trainSpend+=c.cost;G.trainCount++;G.salaryBonus+=c.gain;
+  $('src').classList.remove('show');
+  const payback=Math.ceil(c.cost/c.gain);
+  const remINC=Math.max(0,Math.round(5*(TOTAL_NODES-G.turn)/TOTAL_NODES));
+  log(`<b>CAP</b> \u00b7 ${c.t} \u2212${fmt(c.cost)} \u00b7 sueldo +${fmt(c.gain)}`,'up');
+  card('cap',c.t+' \u2014 inscripci\u00f3n confirmada',
+    `Se descontaron ${fmt(c.cost)} del disponible. A partir de ahora cada nodo INC acredita ${fmt(SALARY+G.salaryBonus)} en lugar de ${fmt(SALARY)}.`,
+    '+'+fmt(c.gain),'Incremento permanente por nodo INC','var(--acid)',
+    remINC>=payback
+      ? `<strong>Retorno dentro del horizonte.</strong> ${c.n} La decisi\u00f3n se recupera antes de que termine el ejercicio: ${payback} acreditaciones para amortizar frente a las ${remINC} que restan.`
+      : `<strong>Retorno fuera del horizonte del ejercicio.</strong> ${c.n} Con ${remINC} acreditaciones restantes y ${payback} necesarias, esta capacitaci\u00f3n no se amortiza dentro de la simulaci\u00f3n. Fuera de ella s\u00ed lo har\u00eda: el horizonte laboral no son 25 nodos, son d\u00e9cadas. El error no es invertir tarde, sino evaluar una inversi\u00f3n formativa con el plazo equivocado.`,
+    `<div class="calc">
+      <div class="calc-row"><span class="k">Costo \u00fanico</span><span style="color:var(--down)">\u2212${fmt(c.cost)}</span></div>
+      <div class="calc-row"><span class="k">Incremento por nodo INC</span><span style="color:var(--acid)">+${fmt(c.gain)}</span></div>
+      <div class="calc-row"><span class="k">Nuevo ingreso por nodo INC</span><span style="color:var(--up)">${fmt(SALARY+G.salaryBonus)}</span></div>
+    </div>`);
+  updateDash();done();
+}
+function skipCAP(){
+  const c=G.curCap;
+  $('src').classList.remove('show');
+  log(`<b>CAP</b> \u00b7 ${c.t} declinada`,'warn');
+  card('cap','Capacitaci\u00f3n declinada',
+    `No se realiz\u00f3 el desembolso. El disponible conserva ${fmt(c.cost)} y el ingreso por nodo INC permanece en ${fmt(SALARY+G.salaryBonus)}.`,
+    '$0','Sin cambio en el ingreso','var(--dim)',
+    '<strong>Preservar liquidez tambi\u00e9n cuesta.</strong> Declinar mantiene intacto el disponible, pero congela la capacidad de generar ingreso. Es la decisi\u00f3n correcta cuando no existe respaldo ante contingencias; es la equivocada cuando se posterga por comodidad. La diferencia es verificable: revisa si tienes fondo de emergencia antes de justificar la postergaci\u00f3n.');
+  updateDash();done();
+}
+
+// \u2500\u2500 RETIRO DE INVERSI\u00d3N (decisi\u00f3n) \u2500\u2500
+function doRET(){
+  if(G.invValue<50){
+    log('<b>RET</b> \u00b7 Sin posiciones que liquidar','warn');
+    card('ret','Ventana de liquidaci\u00f3n \u2014 sin posiciones',
+      'No mantienes saldo invertido, de modo que no hay nada que retirar. La ventana se cierra sin movimiento.',
+      '$0','Sin posiciones abiertas','var(--dim)',
+      '<strong>Solo se puede liquidar lo que antes se asign\u00f3.</strong> La ventana de retiro existe porque la inversi\u00f3n no es una caja cerrada: el capital sigue siendo tuyo y recuperable. Quien nunca asigna, tampoco tiene de d\u00f3nde disponer cuando lo necesita.');
+    done();return;
+  }
+  G.decMode='ret';
+  const pnl=G.invValue-G.invBasis;
+  $('dec').style.setProperty('--dec-color','var(--warn)');
+  $('dec-title').textContent='Ventana de liquidaci\u00f3n \u2014 retiro de inversi\u00f3n';
+  $('dec-desc').textContent=`El portafolio vale ${fmt(G.invValue)} sobre un capital asignado de ${fmt(G.invBasis)}. Define cu\u00e1nto retiras y devuelves a disponible. El retiro realiza la ganancia o la p\u00e9rdida en la proporci\u00f3n que liquides.`;
+  $('dec-calc').innerHTML=`<div class="calc">
+    <div class="calc-row"><span class="k">Valor actual de la inversi\u00f3n</span><span style="color:var(--info)">${fmt(G.invValue)}</span></div>
+    <div class="calc-row"><span class="k">Capital asignado (base)</span><span style="color:var(--dim)">${fmt(G.invBasis)}</span></div>
+    <div class="calc-row"><span class="k">Plusval\u00eda no realizada</span><span style="color:${pnl>=0?'var(--up)':'var(--down)'}">${fmtS(pnl)}</span></div>
+  </div>`;
+  $('slider').max=Math.floor(G.invValue);
+  $('slider').value=0;
+  $('r-max').textContent=fmt(G.invValue);
+  $('dec-hint').innerHTML=`Disponible actual: <b>${fmt(G.cash)}</b> \u00b7 Apartados: <b style="color:var(--up)">${fmt(G.savings)}</b>`;
+  $('btn-exec').textContent='Retirar a disponible';
+  updateSlider();$('dec').classList.add('show');
+}
+function confirmWithdraw(amt){
+  amt=Math.min(amt,G.invValue);
+  const ratio=amt/G.invValue;
+  const basisOut=G.invBasis*ratio;
+  const realized=amt-basisOut;
+  G.invValue-=amt;G.invBasis-=basisOut;G.cash+=amt;
+  G.totWithdrawn+=amt;G.realizedPnL+=realized;
+  $('dec').classList.remove('show');
+  log(`<b>RET</b> \u00b7 Retirados ${fmt(amt)} a disponible`,'warn');
+  card('ret',(G.invValue<50)?'Liquidaci\u00f3n total de la inversi\u00f3n':'Retiro parcial ejecutado',
+    `Se devolvieron ${fmt(amt)} a disponible. La inversi\u00f3n conserva ${fmt(G.invValue)}.`,
+    '+'+fmt(amt),'Traslado a disponible','var(--warn)',
+    realized>=0
+      ? `<strong>Ganancia realizada: ${fmt(realized)}.</strong> Liquidar convierte una plusval\u00eda en papel en dinero efectivo, pero detiene la capitalizaci\u00f3n sobre ese capital. El retiro se justifica cuando responde a una necesidad concreta; cuando responde al nerviosismo ante la volatilidad, suele ocurrir en el peor momento del ciclo.`
+      : `<strong>P\u00e9rdida realizada: ${fmt(Math.abs(realized))}.</strong> Retirar por debajo del capital asignado cristaliza una minusval\u00eda que hasta ese momento era solo contable. Es la conducta que m\u00e1s destruye rendimiento de largo plazo: vender en el retroceso convierte una fluctuaci\u00f3n temporal en una p\u00e9rdida definitiva.`,
+    `<div class="calc">
+      <div class="calc-row"><span class="k">Monto retirado</span><span style="color:var(--warn)">${fmt(amt)}</span></div>
+      <div class="calc-row"><span class="k">Base de capital liquidada</span><span style="color:var(--dim)">${fmt(basisOut)}</span></div>
+      <div class="calc-row"><span class="k">Resultado realizado</span><span style="color:${realized>=0?'var(--up)':'var(--down)'}">${fmtS(realized)}</span></div>
+    </div>`);
+  updateDash();done();
+}
+function skipWithdraw(){
+  $('dec').classList.remove('show');
+  log('<b>RET</b> \u00b7 Sin retiro \u00b7 posici\u00f3n conservada','up');
+  card('ret','Posici\u00f3n conservada',
+    `No se liquid\u00f3 ninguna posici\u00f3n. La inversi\u00f3n permanece en ${fmt(G.invValue)} y contin\u00faa expuesta a la evoluci\u00f3n del mercado.`,
+    fmt(G.invValue),'Inversi\u00f3n sin cambios','var(--info)',
+    '<strong>No hacer nada es, con frecuencia, la mejor operaci\u00f3n.</strong> El rendimiento de largo plazo se concentra en un n\u00famero reducido de sesiones alcistas, y quien liquida por impulso rara vez est\u00e1 posicionado cuando ocurren. Conservar exige menos habilidad que acertar el momento de salida, y produce mejores resultados.');
+  done();
+}
+
+// ── CIERRE DE CICLO ──
+function doCIC(){
+  G.cash+=CYCLE_BONUS;G.pIncome+=CYCLE_BONUS;G.totIncome+=CYCLE_BONUS;
+  log(`<b>CIC</b> · Vuelta completa +${fmt(CYCLE_BONUS)}`,'up');
+  card('cic','Vuelta completa al tablero',
+    `Se completó el circuito de 25 nodos. Se acredita un bono de constancia por ${fmt(CYCLE_BONUS)}.`,
+    '+'+fmt(CYCLE_BONUS),'Bono de constancia','var(--acid)',
+    '<strong>La constancia domina a la magnitud.</strong> Sostener la conducta financiera a lo largo de todo el ciclo pesa más en el resultado final que el acierto puntual en cualquier decisión individual.');
+  updateDash();done();
+}
+
+// ── TURNO ──
+function nextTurn(){
+  if(G.savings>0)G.savings*=(1+0.07/25);
+  const net=netWorth();
+  G.hist.push({n:G.turn,net,s:G.savings,i:G.invValue});
+  updateDash();hideAll();
+  if(G.turn>=TOTAL_NODES){setTimeout(showResults,350);}
+  else{$('btn-roll').disabled=false;setNodePanel(SPACES[G.pos],G.pos);}
+}
+
+// ═══════ RESULTADOS ═══════
+function showResults(){
+  stopTicker();
+  showScreen('screen-results');
+  const net=netWorth();
+  const build=G.savings+G.invValue;
+  const consume=G.totLiving+G.totImpulse+G.totRisk;
+  const tot=Math.max(1,build+consume);
+  const bPct=build/tot*100, cPct=consume/tot*100;
+  const ratio=build>0?(consume/build):Infinity;
+
+  let tag,title,lead;
+  if(bPct>=55){tag='Perfil constructor';title='Construyes más de lo que consumes.';
+    lead='La proporción destinada a fondo de ahorro y portafolio supera al gasto acumulado del ejercicio. Es el patrón asociado a la acumulación patrimonial sostenida: no depende de ingresos altos, sino de una estructura de egresos contenida.';}
+  else if(bPct>=35){tag='Perfil equilibrado';title='Construyes, pero el consumo pesa.';
+    lead='Existe capital destinado a ahorro e inversión, aunque el gasto acumulado —corriente, impulsivo y por contingencias— absorbe la mayor parte del ingreso. El margen de mejora está concentrado en las ofertas aceptadas: son el único componente enteramente bajo tu control.';}
+  else if(bPct>=18){tag='Perfil consumidor';title='El consumo domina tu estructura.';
+    lead='La mayor parte del ingreso se destinó a gasto. El fondo y el portafolio quedaron con posiciones marginales. En este escenario el patrimonio no se erosiona por una decisión grande, sino por la acumulación de egresos pequeños que nunca se contuvieron.';}
+  else{tag='Perfil sin capacidad de construcción';title='No hubo excedente que trasladar.';
+    lead='Prácticamente la totalidad del ingreso se consumió durante el ejercicio. Los cortes de ahorro encontraron diferencias nulas o negativas de forma reiterada. Este es exactamente el mecanismo que la simulación busca hacer visible antes de que ocurra en la vida real.';}
+  $('v-tag').textContent=tag;$('verdict').textContent=title;$('verdict-lead').textContent=lead;
+
+  // ── Del arranque al cierre ──
+  const diff=net-START, dPct=diff/START*100;
+  const sinOfertas=net+G.totImpulse;
+  $('delta-block').innerHTML=`
+    <div class="db-flow">
+      <div><div class="dbf-k">Capital de arranque</div>
+        <div class="dbf-v" style="color:var(--dim)">${fmt(START)}</div></div>
+      <div class="dbf-arrow">&rarr;</div>
+      <div style="text-align:right"><div class="dbf-k">Patrimonio al cierre</div>
+        <div class="dbf-v" style="color:var(--acid)">${fmt(net)}</div></div>
+    </div>
+    <div class="db-delta-k">Diferencia atribuible a tus decisiones</div>
+    <div class="db-delta-v" style="color:${diff>=0?'var(--up)':'var(--down)'}">${diff>=0?'+':'\u2212'}${fmt(Math.abs(diff))}</div>
+    <div class="db-delta-p" style="color:${diff>=0?'var(--up)':'var(--down)'}">${diff>=0?'+':'\u2212'}${Math.abs(dPct).toFixed(1)}% sobre el capital inicial</div>
+    <div class="db-delta-note">${
+      G.totImpulse>0
+        ? `Aceptaste ofertas por <b>${fmt(G.totImpulse)}</b>. De haberlas declinado todas, habr\u00edas cerrado con aproximadamente <b>${fmt(sinOfertas)}</b>, es decir <b>${fmt(G.totImpulse)}</b> por encima de tu resultado real. Ese es el precio exacto de las decisiones de consumo que s\u00ed estuvieron bajo tu control.`
+        : `No aceptaste ninguna oferta durante el ejercicio. La totalidad de la diferencia procede de tus decisiones de ahorro, inversi\u00f3n y manejo de contingencias, sin desviaciones por consumo evitable.`
+    }</div>`;
+
+  // ── Calificación 5 estrellas ──
+  let stars = net<=START
+    ? Math.max(0.5, Math.min(1, net/START))
+    : 1 + 4*Math.min(1,(net-START)/(2*START));
+  stars = Math.round(stars*2)/2;
+  const SL = stars>=5 ? ['Constructor patrimonial','Triplicaste o superaste el capital de arranque. La combinaci\u00f3n de contenci\u00f3n del gasto, ahorro sostenido y exposici\u00f3n al mercado operó en la misma direcci\u00f3n durante todo el ciclo.']
+    : stars>=4 ? ['Desempeño sobresaliente','El patrimonio creció muy por encima del arranque. Las decisiones de asignaci\u00f3n dominaron sobre las de consumo de forma consistente.']
+    : stars>=3 ? ['Desempeño s\u00f3lido','Crecimiento claro respecto al capital inicial. Queda margen en las ofertas aceptadas y en la proporci\u00f3n trasladada en cada corte de ahorro.']
+    : stars>=2 ? ['Desempeño moderado','Cerraste por encima del arranque, aunque el consumo absorbi\u00f3 buena parte del ingreso generado durante el ciclo.']
+    : stars>=1.5 ? ['Apenas por encima del arranque','El patrimonio creci\u00f3 marginalmente. Con este ritmo, la inflaci\u00f3n neutraliza el avance en cuesti\u00f3n de meses.']
+    : stars>=1 ? ['Cerraste igual que iniciaste','Todo lo que ingres\u00f3 durante el ciclo se consumi\u00f3. No hubo destrucci\u00f3n de patrimonio, pero tampoco construcci\u00f3n: doce meses de flujo sin efecto acumulado.']
+    : ['Cerraste por debajo del arranque','El ejercicio termin\u00f3 con menos capital del inicial. Es el escenario que la simulaci\u00f3n busca hacer visible: el deterioro no proviene de una decisi\u00f3n grande, sino de la suma de egresos peque\u00f1os nunca contenidos.'];
+  const SP='M12 1.8l3.09 6.53 6.91.97-5 5.05L18.18 21.4 12 18l-6.18 3.4L7 14.35l-5-5.05 6.91-.97z';
+  const starHTML=Array.from({length:5},(_,i)=>{
+    const f=Math.max(0,Math.min(1,stars-i));
+    return `<svg viewBox="0 0 24 24" role="img" aria-label="estrella ${i+1}">
+      <defs><clipPath id="stc${i}"><rect x="0" y="0" width="${(f*24).toFixed(2)}" height="24"/></clipPath></defs>
+      <path d="${SP}" fill="none" stroke="rgba(255,255,255,.17)" stroke-width="1.4"/>
+      <path d="${SP}" fill="var(--acid)" clip-path="url(#stc${i})"/></svg>`;}).join('');
+  $('stars-block').innerHTML=`
+    <div>
+      <div class="micro" style="margin-bottom:12px">Calificaci\u00f3n del jugador</div>
+      <div class="stars-row">${starHTML}</div>
+    </div>
+    <div style="flex:1;min-width:240px">
+      <div class="stars-score">${stars.toFixed(1)}<small> / 5.0</small></div>
+      <div class="stars-label" style="margin-top:10px">${SL[0]}</div>
+      <div class="stars-desc">${SL[1]}</div>
+    </div>
+    <div class="stars-scale">
+      1 estrella &middot; ${fmt(START)} (arranque)<br/>
+      3 estrellas &middot; ${fmt(START*2)}<br/>
+      5 estrellas &middot; ${fmt(START*3)} o m\u00e1s
+    </div>`;
+
+  const consumeDecision=G.totImpulse, consumeForced=G.totLiving+G.totRisk;
+  const totalConsume=consumeDecision+consumeForced;
+  const attrPct=totalConsume>0?(consumeDecision/totalConsume*100):0;
+  const counter=net+G.totImpulse;
+
+  $('saldos').innerHTML=`
+    <div class="saldo"><div class="k">Disponible</div>
+      <div class="v" style="color:var(--acid)">${fmt(G.cash)}</div>
+      <div class="s">Liquidez inmediata</div></div>
+    <div class="saldo"><div class="k">Apartados · ahorro SV</div>
+      <div class="v" style="color:var(--up)">${fmt(G.savings)}</div>
+      <div class="s">Respaldo ante contingencias</div></div>
+    <div class="saldo"><div class="k">Inversión</div>
+      <div class="v" style="color:var(--info)">${fmt(G.invValue)}</div>
+      <div class="s">Capital asignado ${fmt(G.invBasis)}</div></div>
+    <div class="saldo"><div class="k">${G.debt>0?'Deuda contraída':'Patrimonio neto'}</div>
+      <div class="v" style="color:${G.debt>0?'var(--down)':'var(--acid)'}">${G.debt>0?fmt(G.debt):fmt(net)}</div>
+      <div class="s">${G.debt>0?'Contingencias sin cobertura':'Suma de los tres saldos'}</div></div>`;
+
+  $('attrib').innerHTML=`
+    <div class="att-cell">
+      <span class="att-tag" style="background:rgba(255,77,94,.14);color:var(--down)">Evitable · tus decisiones</span>
+      <div class="att-v" style="color:var(--down)">${fmt(consumeDecision)}</div>
+      <div class="att-d">Ofertas que aceptaste. Es el único componente del gasto que estuvo enteramente bajo tu control: representa el <b>${attrPct.toFixed(1)}%</b> de todo lo consumido en el ejercicio.</div>
+    </div>
+    <div class="att-cell">
+      <span class="att-tag" style="background:rgba(255,170,51,.14);color:var(--warn)">Inevitable · obligaciones</span>
+      <div class="att-v" style="color:var(--warn)">${fmt(G.totLiving)}</div>
+      <div class="att-d">Renta, despensa, transporte y servicios. No se elimina; se administra. Su peso define el margen con el que operan todas las demás decisiones.</div>
+    </div>
+    <div class="att-cell">
+      <span class="att-tag" style="background:rgba(176,108,255,.14);color:var(--alt)">Amortiguable · contingencias</span>
+      <div class="att-v" style="color:var(--alt)">${fmt(G.totRisk)}</div>
+      <div class="att-d">Imprevistos aleatorios. ${G.noBackup>0?`En <b>${G.noBackup}</b> ocasión(es) los apartados no alcanzaron y el gasto migró al disponible o a deuda.`:'Tus apartados absorbieron la totalidad sin comprometer el disponible.'}</div>
+    </div>`;
+
+  $('balance').innerHTML=`
+    <div class="bal-head">
+      <div>
+        <div class="micro" style="margin-bottom:8px">Por cada peso destinado a construir patrimonio</div>
+        <div class="bal-ratio" style="color:${ratio<=1?'var(--up)':ratio<=2.5?'var(--warn)':'var(--down)'}">
+          ${ratio===Infinity?'—':'$'+ratio.toFixed(2)}<small> consumidos</small></div>
+      </div>
+      <div style="text-align:right">
+        <div class="micro" style="margin-bottom:8px">Patrimonio neto final</div>
+        <div class="bal-ratio" style="color:var(--acid)">${fmt(net)}</div>
+      </div>
+    </div>
+    <div class="bal-side">
+      <div class="bal-top"><span class="bal-lbl" style="color:var(--up)">Construcción · ahorro + inversión</span>
+        <span class="bal-amt" style="color:var(--up)">${fmt(build)}</span></div>
+      <div class="bal-track"><div class="bal-fill" id="bf-build" style="width:0%;background:var(--up)"></div></div>
+      <div class="bal-legend"><span>${bPct.toFixed(1)}% del total movilizado</span><span>Capital que genera rendimiento</span></div>
+    </div>
+    <div class="bal-side">
+      <div class="bal-top"><span class="bal-lbl" style="color:var(--down)">Consumo · gastos + ofertas + imprevistos</span>
+        <span class="bal-amt" style="color:var(--down)">${fmt(consume)}</span></div>
+      <div class="bal-track"><div class="bal-fill" id="bf-cons" style="width:0%;background:var(--down)"></div></div>
+      <div class="bal-legend"><span>${cPct.toFixed(1)}% del total movilizado</span><span>Capital que no retorna</span></div>
+    </div>
+    <div class="bal-break">
+      <div class="bal-cell"><div class="k">Patrimonio obtenido</div><div class="v" style="color:var(--acid)">${fmt(net)}</div></div>
+      <div class="bal-cell"><div class="k">Escenario sin ofertas aceptadas</div><div class="v" style="color:var(--up)">${fmt(counter)}</div></div>
+      <div class="bal-cell"><div class="k">Diferencia atribuible a tus decisiones</div><div class="v" style="color:${G.totImpulse>0?'var(--down)':'var(--up)'}">${G.totImpulse>0?'−'+fmt(G.totImpulse):'$0'}</div></div>
+    </div>`;
+  setTimeout(()=>{$('bf-build').style.width=bPct+'%';$('bf-cons').style.width=cPct+'%';},250);
+
+  const M=[
+    ['Patrimonio final',fmt(net),net>=START?'var(--up)':'var(--down)'],
+    ['Ingreso total del ciclo',fmt(G.totIncome),'var(--acid)'],
+    ['Fondo de ahorro',fmt(G.savings),'var(--up)'],
+    ['Valor del portafolio',fmt(G.invValue),'var(--info)'],
+    ['Ofertas aceptadas',pad(G.impulseTaken)+' de '+pad(G.impulseTaken+G.impulseDeclined),'var(--down)'],
+    ['Efectivo preservado al declinar',fmt(G.impulseAvoided),'var(--up)'],
+    ['Reactivos acertados',pad(G.quizOK)+' de '+pad(G.quizN)+(G.quizPenalty>0?' · −'+fmt(G.quizPenalty):''),G.quizOK>=G.quizN/2?'var(--up)':'var(--warn)'],
+    ['Invertido en capacitación',fmt(G.trainSpend)+(G.trainCount>0?' · '+G.trainCount+' prog.':''),G.trainSpend>0?'var(--acid)':'var(--dim)'],
+    ['Retorno de la capacitación',fmt(G.trainReturn),G.trainReturn>=G.trainSpend?'var(--up)':'var(--warn)'],
+    ['Ingreso final por nodo INC',fmt(SALARY+G.salaryBonus),G.salaryBonus>0?'var(--acid)':'var(--dim)'],
+    ['Tasa de ahorro sobre ingreso',(G.totIncome>0?(G.totSaved/G.totIncome*100).toFixed(1):'0.0')+'%',
+      (G.totSaved/Math.max(1,G.totIncome))>=0.2?'var(--up)':'var(--warn)'],
+  ];
+  $('metrics').innerHTML=M.map(m=>
+    `<div class="metric"><div class="metric-k">${m[0]}</div><div class="metric-v" style="color:${m[2]}">${m[1]}</div></div>`).join('');
+
+  const ch=Chart.getChart('chart');if(ch)ch.destroy();
+  new Chart($('chart').getContext('2d'),{
+    type:'line',
+    data:{labels:G.hist.map(h=>'N'+pad(h.n)),datasets:[
+      {label:'Patrimonio neto',data:G.hist.map(h=>Math.round(h.net)),borderColor:'#ccff02',backgroundColor:'rgba(204,255,2,.06)',borderWidth:2,tension:.35,fill:true,pointRadius:2,pointBackgroundColor:'#ccff02'},
+      {label:'Fondo de ahorro',data:G.hist.map(h=>Math.round(h.s)),borderColor:'#3ddc97',borderWidth:1.2,tension:.35,pointRadius:1.8,pointBackgroundColor:'#3ddc97'},
+      {label:'Portafolio',data:G.hist.map(h=>Math.round(h.i)),borderColor:'#5b8def',borderWidth:1.2,tension:.35,pointRadius:1.8,pointBackgroundColor:'#5b8def'},
+    ]},
+    options:{responsive:true,
+      plugins:{legend:{labels:{color:'#767a83',font:{family:'IBM Plex Mono',size:10},boxWidth:10,boxHeight:2}}},
+      scales:{x:{ticks:{color:'#4a4e56',font:{family:'IBM Plex Mono',size:9},maxTicksLimit:13},grid:{color:'rgba(255,255,255,.04)'},border:{color:'rgba(255,255,255,.08)'}},
+        y:{ticks:{color:'#4a4e56',font:{family:'IBM Plex Mono',size:9},callback:v=>'$'+Math.round(v/1000)+'k'},grid:{color:'rgba(255,255,255,.04)'},border:{color:'rgba(255,255,255,.08)'}}}}
+  });
+
+  const p10=Math.round(G.totImpulse*Math.pow(1.10,10));
+  const a10=Math.round(G.impulseAvoided*Math.pow(1.10,10));
+  const L=[
+    ['El ahorro no se decide: se calcula',
+     `Los cortes de ahorro trasladaron ${fmt(G.totSaved)} al fondo, equivalentes al ${(G.totSaved/Math.max(1,G.totIncome)*100).toFixed(1)}% del ingreso total del ciclo. Ninguna de esas cifras fue elegida: resultó de restar los gastos a los ingresos de cada periodo. La palanca real nunca estuvo en el nodo SAV, sino en cada egreso aceptado antes de llegar a él.`],
+    ['El descuento no es un ahorro',
+     G.impulseTaken>0
+       ? `Se aceptaron ${G.impulseTaken} de ${G.impulseTaken+G.impulseDeclined} promociones, con una salida real de ${fmt(G.totImpulse)}. Ese capital, invertido al 10% anual durante diez años, alcanzaría un valor terminal cercano a ${fmt(p10)}. El comercio anunció un ahorro; el balance registró un egreso.`
+       : `No se aceptó ninguna promoción durante el ejercicio. Los ${fmt(G.impulseAvoided)} preservados permanecieron íntegros como capacidad de ahorro. Sostenido durante diez años al 10% anual, ese capital rondaría ${fmt(a10)}. El único ahorro verificable es el que no se gasta.`],
+    ['Los imprevistos no se evitan: se amortiguan',
+     `Las contingencias del ciclo —atención hospitalaria, reparaciones, fallas domésticas— sumaron ${fmt(G.totRisk)} de asignación automática, sin opción de rechazo. Esa es precisamente su naturaleza. La variable bajo control no es su ocurrencia, sino la existencia previa de un fondo capaz de absorberlas sin liquidar el portafolio.`],
+    ['Ganar más no basta si el gasto crece al mismo ritmo',
+     G.trainSpend>0
+       ? `Invertiste ${fmt(G.trainSpend)} en ${G.trainCount} programa(s) y elevaste tu sueldo por nodo de ${fmt(SALARY)} a ${fmt(SALARY+G.salaryBonus)}, recuperando ${fmt(G.trainReturn)} dentro del ejercicio. ${G.trainReturn>=G.trainSpend?'La inversión formativa se amortizó.':'No alcanzó a amortizarse en 25 nodos, aunque fuera de la simulación el horizonte laboral lo permitiría.'} Ahora el dato decisivo: de todo el ingreso adicional que generaste, ${fmt(Math.min(G.trainReturn,G.totImpulse))} se fue en ofertas aceptadas. Un ingreso mayor solo mejora la posición cuando la estructura de gasto no se expande con él.`
+       : `No invertiste en capacitación, de modo que tu ingreso por nodo permaneció fijo en ${fmt(SALARY)} durante todo el ejercicio. Elevar el ingreso es la única palanca que no tiene techo —a diferencia del recorte de gasto, que sí lo tiene—, pero exige desembolso presente y horizonte. La condición previa es tener respaldo: capacitarse sin fondo de emergencia convierte cualquier contingencia en deuda.`],
+    ['El conocimiento financiero tiene retorno medible',
+     `Se acertaron ${G.quizOK} de ${G.quizN} reactivos, con un bono acumulado de ${fmt(G.quizOK*QUIZ_BONUS)}. Fuera de la simulación el mecanismo es idéntico, aunque menos visible: quien comprende una tasa, un CAT o un rendimiento real contrata mejores productos, paga menos comisiones y evita decisiones que se pagan durante años.`],
+  ];
+  $('lessons').innerHTML=L.map((l,i)=>
+    `<div class="lesson"><span class="lesson-idx">${pad(i+1)}</span>
+      <div><div class="lesson-h">${l[0]}</div><div class="lesson-b">${l[1]}</div></div></div>`).join('');
+
+  // ── RECOMENDACIONES FINALES ──
+  const avgRisk=G.totRisk>0?G.totRisk/Math.max(1,3):900;
+  const target=Math.round(Math.max(avgRisk*3,G.totLiving||2000));
+  const savRate=G.totIncome>0?(G.totSaved/G.totIncome*100):0;
+  const unused=Math.max(0,G.capacityTotal-G.totSaved);
+  const RECS=[];
+
+  if(G.noBackup>0||G.savings<avgRisk){
+    RECS.push(['Constituye el respaldo antes que cualquier otra cosa',
+      `Los imprevistos del ejercicio promediaron <b>${fmt(avgRisk)}</b> y en ${G.noBackup>0?`<b>${G.noBackup}</b> ocasión(es) no hubo respaldo suficiente`:'tus apartados quedaron por debajo de ese promedio'}. Fija como primera meta un fondo de <b>${fmt(target)}</b>, equivalente a unos tres eventos de esa magnitud, y sepáralo en una cuenta distinta a la de gasto diario. Mientras ese piso no exista, cualquier inversión es vulnerable: la primera contingencia obliga a liquidarla.`]);
+  } else {
+    RECS.push(['Conserva y eleva gradualmente el respaldo',
+      `Tus apartados cerraron en <b>${fmt(G.savings)}</b> y absorbieron las contingencias sin comprometer el disponible. Ese es el comportamiento correcto. El siguiente escalón es llevar el fondo a <b>${fmt(target)}</b> —cerca de tres imprevistos promedio— y a partir de ahí canalizar el excedente a inversión en lugar de acumularlo en una cuenta sin rendimiento.`]);
+  }
+
+  if(G.totImpulse>0){
+    RECS.push(['Aplica la regla de las 48 horas a toda promoción',
+      `Aceptaste ${G.impulseTaken} de ${G.impulseTaken+G.impulseDeclined} ofertas, con una salida de <b>${fmt(G.totImpulse)}</b>. Sin esas compras tu patrimonio final habría sido de <b>${fmt(counter)}</b> en lugar de ${fmt(net)}. La medida más efectiva no es prohibirte comprar, sino introducir demora: si la promoción no estaba contemplada 48 horas antes, difiérela otras 48. La mayoría de las compras impulsivas no sobrevive a esa espera.`]);
+  } else {
+    RECS.push(['Sostén el criterio que ya demostraste',
+      `Declinaste la totalidad de las promociones y preservaste <b>${fmt(G.impulseAvoided)}</b>. Ese es el hábito con mayor impacto sobre el patrimonio de largo plazo. Formalízalo con un presupuesto explícito de gasto discrecional: rechazar todo no es sostenible en la vida real, pero decidir por anticipado cuánto puedes gastar sí lo es.`]);
+  }
+
+  if(unused>50){
+    RECS.push(['Automatiza el traslado el mismo día del ingreso',
+      `Tus periodos generaron una capacidad acumulada de <b>${fmt(G.capacityTotal)}</b>, de la cual trasladaste <b>${fmt(G.totSaved)}</b>. Quedaron <b>${fmt(unused)}</b> sin apartar, permaneciendo en disponible donde no rinden y quedan expuestos al siguiente gasto. Programa una transferencia automática el día de la nómina: el ahorro que depende de la voluntad al final del mes es el que no ocurre.`]);
+  }
+
+  if(G.totInvested<=0){
+    RECS.push(['Inicia la exposición al mercado, aunque sea marginal',
+      `No asignaste capital a inversión durante el ejercicio. Con una inflación del 6%, el dinero en disponible pierde poder adquisitivo de forma silenciosa. Comienza con montos pequeños y periódicos en instrumentos de bajo riesgo —CETES o fondos indizados— una vez constituido el respaldo. El objetivo inicial no es rendir mucho, sino dejar de perder contra la inflación.`]);
+  } else if(G.totWithdrawn>G.totInvested*0.5){
+    RECS.push(['Reduce la frecuencia de retiros',
+      `Retiraste <b>${fmt(G.totWithdrawn)}</b> sobre <b>${fmt(G.totInvested)}</b> asignados, con un resultado realizado de <b>${fmtS(G.realizedPnL)}</b>. La liquidación frecuente interrumpe la capitalización y suele ejecutarse en momentos desfavorables. Define por anticipado bajo qué condiciones concretas retirarías, y trata cualquier otra razón como insuficiente.`]);
+  } else {
+    RECS.push(['Mantén el horizonte de la inversión',
+      `Asignaste <b>${fmt(G.totInvested)}</b> y cerraste con <b>${fmt(G.invValue)}</b>. La disciplina de no liquidar ante la volatilidad es lo que permite que el rendimiento compuesto opere. Establece un horizonte mínimo de cinco a diez años para ese capital y revísalo por calendario, no por titulares.`]);
+  }
+
+  if(G.quizN>0&&G.quizOK<G.quizN*0.7){
+    RECS.push(['Cierra la brecha de conocimiento financiero',
+      `Acertaste ${G.quizOK} de ${G.quizN} reactivos. Los conceptos fallados —tasas, CAT, rendimiento real, liquidez— no son teoría: determinan qué crédito contratas, cuánto pagas de comisiones y si un instrumento realmente te conviene. Dedicar unas horas a estos fundamentos tiene un retorno superior al de cualquier decisión puntual de inversión.`]);
+  }
+
+  if(G.trainSpend>0&&G.totImpulse>=G.trainReturn*0.5){
+    RECS.push(['No dejes que el gasto absorba el ingreso que construiste',
+      `Elevaste tu ingreso por nodo a <b>${fmt(SALARY+G.salaryBonus)}</b> mediante capacitación, pero destinaste <b>${fmt(G.totImpulse)}</b> a ofertas. Ese es el mecanismo de la inflación de estilo de vida: el ingreso sube y el consumo lo sigue, de modo que la posición financiera no mejora pese al esfuerzo formativo. La medida correctiva es fijar el porcentaje de ahorro antes del aumento y mantenerlo después: destina al menos la mitad de todo incremento a apartados o inversión.`]);
+  } else if(G.trainSpend<=0){
+    RECS.push(['Considera la capacitación como inversión, no como gasto',
+      `Tu ingreso permaneció fijo en <b>${fmt(SALARY)}</b> por nodo durante todo el ejercicio. Contener el gasto tiene un límite aritmético —no puedes gastar menos de cero—, mientras que elevar el ingreso no lo tiene. Evalúa programas cuyo costo se amortice en un plazo verificable y ejecútalos <b>después</b> de constituir el fondo de emergencia, nunca antes: capacitarse sin respaldo convierte la primera contingencia en deuda.`]);
+  }
+
+  RECS.push(['Revisa la relación gasto-ingreso antes que el monto del ingreso',
+    `Cerraste con una tasa de ahorro del <b>${savRate.toFixed(1)}%</b> sobre un ingreso total de <b>${fmt(G.totIncome)}</b>. El deterioro de las finanzas personales rara vez proviene de ingresos insuficientes: proviene de una estructura de gasto que crece al ritmo del ingreso. Fija tu porcentaje de ahorro como una constante y ajusta el consumo a lo que quede, no al revés.`]);
+
+  $('recs').innerHTML=RECS.slice(0,7).map((r,i)=>
+    `<div class="rec"><span class="rec-idx">R${pad(i+1)}</span>
+      <div><div class="rec-h">${r[0]}</div><div class="rec-b">${r[1]}</div></div></div>`).join('');
+}
+function restartGame(){
+  stopTicker();
+  const ch=Chart.getChart('chart');if(ch)ch.destroy();
+  showScreen('screen-intro');
+}
+</script>
+</body>
+</html>
