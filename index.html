@@ -54,7 +54,11 @@ h1.hero .hi{color:var(--acid);}
 .mod-name .bar{display:block;width:26px;height:2px;margin-top:9px;}
 .mod-name .tagm{display:block;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--dimmer);margin-top:7px;text-transform:uppercase;}
 .mod-desc{font-size:13px;color:var(--dim);line-height:1.7;}
-.cta-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap;}
+.cta-row{display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-bottom:44px;}
+.credit{border-top:1px solid var(--line);padding:26px 0 8px;margin-top:44px;}
+.credit-name{font-size:16px;font-weight:500;letter-spacing:-.01em;color:var(--txt);margin-bottom:7px;}
+.credit-name .reg{color:var(--acid);font-size:.72em;vertical-align:super;margin-left:3px;font-weight:600;}
+.credit-sub{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dimmer);}
 .btn-primary{background:var(--acid);color:#0a0d00;border:none;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;
   letter-spacing:.14em;text-transform:uppercase;padding:16px 40px;cursor:pointer;transition:.18s;}
 .btn-primary:hover{background:#dcff3f;transform:translateY(-1px);}
@@ -388,16 +392,21 @@ h2.verdict{font-size:clamp(2rem,5.2vw,3.5rem);font-weight:500;letter-spacing:-.0
     <div class="mh-right"><span>Rel. 3.0</span><span>MXN</span></div>
   </div>
   <div class="intro-hero">
-    <div class="hero-tag"><span class="micro">Simulador de decisiones económicas</span><span class="rule"></span></div>
-    <h1 class="hero"><span class="lo">Veinticinco nodos.</span><br/>Un solo dado.<br/><span class="hi">Tu patrimonio.</span></h1>
+    <div class="hero-tag"><span class="micro">Finanzas personales · Veinticinco nodos · Un solo dado</span><span class="rule"></span></div>
+    <h1 class="hero"><span class="lo">Simulador de</span><br/><span class="hi">Decisiones Financieras</span><br/><span class="lo" style="font-size:.44em;letter-spacing:-.01em">(Finanzas Personales)</span></h1>
     <p class="hero-lead">Un modelo conductual que pone a prueba una sola pregunta: ¿mejora tu situación quien gana más, o quien gasta mejor? Aquí puedes elevar tu ingreso capacitándote, pero cada oferta aceptada estrecha el margen antes de que llegues a decidir cuánto apartar.</p>
+
+    <div class="cta-row">
+      <button class="btn-primary" onclick="startGame()">Iniciar simulación</button>
+      <span class="cta-note">Sesión anónima · Sin registro · Resultados locales</span>
+    </div>
 
     <div class="hero-tag"><span class="micro">Parámetros del ejercicio</span><span class="rule"></span></div>
     <div class="termsheet">
       <div class="ts-row"><span class="ts-key">Capital inicial</span><span class="ts-val">Disponible (liquidez inmediata) al arranque</span><span class="ts-num">$3,000.00</span></div>
       <div class="ts-row"><span class="ts-key">Extensión</span><span class="ts-val">Nodos visitados hasta el cierre del ejercicio</span><span class="ts-num">25 nodos</span></div>
       <div class="ts-row"><span class="ts-key">Mecanismo de avance</span><span class="ts-val">Un dado de seis caras, resultado aleatorio</span><span class="ts-num">1 – 6</span></div>
-      <div class="ts-row"><span class="ts-key">Sueldo por nodo INC</span><span class="ts-val">Percepción ordinaria acreditada al efectivo</span><span class="ts-num">$1,200.00</span></div>
+      <div class="ts-row"><span class="ts-key">Sueldo por nodo INC</span><span class="ts-val">Percepción ordinaria acreditada al disponible</span><span class="ts-num">$1,000.00</span></div>
       <div class="ts-row"><span class="ts-key">Reactivo por nodo INC</span><span class="ts-val">Acierto acredita bono; error lo descuenta del disponible</span><span class="ts-num">± $350.00</span></div>
       <div class="ts-row"><span class="ts-key">Capacitación</span><span class="ts-val">Costo único que eleva de forma permanente el sueldo</span><span class="ts-num">$500 – $1,900</span></div>
       <div class="ts-row"><span class="ts-key">Tasa del fondo de ahorro</span><span class="ts-val">Rendimiento nominal anual, capitaliza por nodo</span><span class="ts-num">7.00%</span></div>
@@ -432,9 +441,9 @@ h2.verdict{font-size:clamp(2rem,5.2vw,3.5rem);font-weight:500;letter-spacing:-.0
         <span class="mod-desc">Cumpleaños, aguinaldo, devolución fiscal, expansión de mercado. Ingresos fuera del flujo ordinario que revelan cómo se administra lo que no se esperaba.</span></div>
     </div>
 
-    <div class="cta-row">
-      <button class="btn-primary" onclick="startGame()">Iniciar simulación</button>
-      <span class="cta-note">Sesión anónima · Sin registro · Resultados locales</span>
+    <div class="credit">
+      <div class="credit-name">By: Dr. José Alfredo Torres<span class="reg">&reg;</span></div>
+      <div class="credit-sub">Derechos Reservados</div>
     </div>
   </div>
 </div>
@@ -533,7 +542,7 @@ h2.verdict{font-size:clamp(2rem,5.2vw,3.5rem);font-weight:500;letter-spacing:-.0
         <div class="ledger">
           <div class="led-row"><span class="led-k">Disponible · liquidez inmediata</span><span class="led-v" id="l-cash">$3,000</span></div>
           <div class="led-row"><span class="led-k">Apartados · ahorro SV</span><span class="led-v" id="l-sav" style="color:var(--up)">$0</span></div>
-          <div class="led-row"><span class="led-k">Ingreso por nodo INC</span><span class="led-v" id="l-sal" style="color:var(--acid)">$1,200</span></div>
+          <div class="led-row"><span class="led-k">Ingreso por nodo INC</span><span class="led-v" id="l-sal" style="color:var(--acid)">$1,000</span></div>
           <div class="led-row" id="debt-row" style="display:none"><span class="led-k">Deuda contraída</span><span class="led-v" id="l-debt" style="color:var(--down)">$0</span></div>
         </div>
         <div class="inv-live">
@@ -601,13 +610,18 @@ h2.verdict{font-size:clamp(2rem,5.2vw,3.5rem);font-weight:500;letter-spacing:-.0
     <div class="recs" id="recs"></div>
 
     <button class="btn-reset" onclick="restartGame()">Reiniciar simulación</button>
+
+    <div class="credit">
+      <div class="credit-name">By: Dr. José Alfredo Torres<span class="reg">&reg;</span></div>
+      <div class="credit-sub">Derechos Reservados</div>
+    </div>
   </div>
 </div>
 
 <script>
 // ═══════ CONFIG ═══════
 const START=3000;
-const TOTAL_NODES=25, SALARY=1200, QUIZ_BONUS=350, CYCLE_BONUS=400;
+const TOTAL_NODES=25, SALARY=1000, QUIZ_BONUS=350, CYCLE_BONUS=400;
 
 const TYPES={
   start:{code:'ST', cat:'Inicio',            color:'var(--dimmer)'},
