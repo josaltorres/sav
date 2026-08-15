@@ -93,6 +93,11 @@ h1.hero .hi{color:var(--acid);}
 .key-auto{margin-left:auto;font-size:8px;color:var(--dimmer);}
 
 .node-panel{border:1px solid var(--line);background:var(--s1);padding:24px 26px;position:relative;}
+.node-panel.off{display:none;}
+.fund-line{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--dim);line-height:1.9;}
+.fund-line b{font-weight:600;}
 .node-panel::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--np-color,var(--dimmer));}
 .np-top{display:flex;align-items:baseline;gap:14px;margin-bottom:12px;}
 .np-code{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:var(--np-color,var(--txt));}
@@ -969,6 +974,7 @@ function rollDice(){
   if($('btn-roll').disabled)return;
   hideAll();$('btn-roll').disabled=true;
   const die=$('die');die.classList.add('roll');
+  $('node-panel').classList.add('off');
   $('dice-out').textContent='Girando…';
   // 3 segundos de animación con caras aleatorias
   let t=0;
@@ -982,6 +988,7 @@ function rollDice(){
     $('dice-out').textContent=d+' → nodo '+pad(G.pos);
     renderBoard();updateStrip();
     const type=SPACES[G.pos];
+    $('node-panel').classList.remove('off');
     setNodePanel(type,G.pos);
     log(`<b>N${pad(G.turn)}</b> · dado ${d} → nodo ${pad(G.pos)} ${TYPES[type].code}`,'info');
     setTimeout(()=>handleNode(type),400);
@@ -1132,6 +1139,37 @@ function skipSave(){
 }
 
 // ── OFERTAS (decisión) ──
+// ── Financiamiento en cascada: disponible → apartados → inversión ──
+function fundPlan(cost){
+  const c=Math.min(cost,Math.max(0,G.cash));
+  let rem=cost-c;
+  const sv=Math.min(rem,G.savings); rem-=sv;
+  const iv=Math.min(rem,G.invValue); rem-=iv;
+  return {cash:c,sav:sv,inv:iv,short:rem,ok:rem<=0.01};
+}
+function applyFund(pl){
+  G.cash-=pl.cash; G.savings-=pl.sav; G.invValue-=pl.inv;
+}
+function fundLabel(pl){
+  const parts=[];
+  if(pl.cash>0)parts.push(`disponible <b style="color:var(--acid)">${fmt(pl.cash)}</b>`);
+  if(pl.sav>0) parts.push(`apartados <b style="color:var(--up)">${fmt(pl.sav)}</b>`);
+  if(pl.inv>0) parts.push(`inversi\u00f3n <b style="color:var(--info)">${fmt(pl.inv)}</b>`);
+  return parts.join(' &nbsp;+&nbsp; ');
+}
+function fundRows(pl){
+  let r='';
+  if(pl.cash>0)r+=`<div class="calc-row"><span class="k">Cubierto con disponible</span><span style="color:var(--acid)">\u2212${fmt(pl.cash)}</span></div>`;
+  if(pl.sav>0) r+=`<div class="calc-row"><span class="k">Cubierto con apartados</span><span style="color:var(--up)">\u2212${fmt(pl.sav)}</span></div>`;
+  if(pl.inv>0) r+=`<div class="calc-row"><span class="k">Cubierto liquidando inversi\u00f3n</span><span style="color:var(--info)">\u2212${fmt(pl.inv)}</span></div>`;
+  return r;
+}
+function fundNote(pl,ctx){
+  if(pl.inv>0) return ` <br/><br/><strong>Liquidaste inversi\u00f3n para ${ctx}.</strong> El disponible y los apartados no alcanzaron, as\u00ed que se vendieron posiciones del portafolio. Deshacer capital de largo plazo para cubrir un gasto de hoy interrumpe la capitalizaci\u00f3n compuesta justo donde m\u00e1s vale: el rendimiento perdido no es el de este mes, es el de todos los a\u00f1os que ese capital ten\u00eda por delante.`;
+  if(pl.sav>0) return ` <br/><br/><strong>Usaste apartados para ${ctx}.</strong> El fondo existe para absorber contingencias, no para financiar decisiones planificables. Cada peso que sale de ah\u00ed reduce tu capacidad de responder al pr\u00f3ximo imprevisto sin recurrir a deuda.`;
+  return '';
+}
+
 function doOFR(){
   const o=pick(OFFERS,G.usedO.ofr||(G.usedO.ofr=[]))||OFFERS[0];
   G.curOffer=o;
@@ -1141,24 +1179,31 @@ function doOFR(){
   $('of-title').textContent=o.t;$('of-desc').textContent=o.d;
   $('of-was').textContent=fmt(o.was);$('of-now').textContent=fmt(o.now);
   $('of-save').textContent='Ahorras '+fmt(o.was-o.now)+' respecto al precio de lista';
-  $('of-meta').textContent=o.meta;
-  $('btn-buy').disabled=(G.cash<o.now);
-  $('btn-buy').textContent=(G.cash<o.now)?'Efectivo insuficiente':'Aprovechar la oferta';
+  const pl=fundPlan(o.now);
+  $('of-meta').innerHTML=o.meta+
+    (pl.ok
+      ? `<div class="fund-line">Se cubrir\u00e1 con &nbsp;${fundLabel(pl)}</div>`
+      : `<div class="fund-line">Recursos totales <b style="color:var(--down)">${fmt(G.cash+G.savings+G.invValue)}</b> \u00b7 faltan <b style="color:var(--down)">${fmt(pl.short)}</b></div>`);
+  $('btn-buy').disabled=!pl.ok;
+  $('btn-buy').textContent=pl.ok?'Aprovechar la oferta':'Recursos insuficientes';
   $('offer').classList.add('show');
 }
 function acceptOffer(){
   const o=G.curOffer;
-  G.cash-=o.now;G.pExpense+=o.now;G.totExpense+=o.now;G.totImpulse+=o.now;G.impulseTaken++;
+  const pl=fundPlan(o.now);
+  applyFund(pl);
+  G.pExpense+=o.now;G.totExpense+=o.now;G.totImpulse+=o.now;G.impulseTaken++;
   $('offer').classList.remove('show');
   log(`<b>OFR</b> · ${o.t} adquirido −${fmt(o.now)}`,'down');
   const calc=`<div class="calc">
     <div class="calc-row"><span class="k">Ahorro anunciado por el comercio</span><span style="color:var(--dim)">${fmt(o.was-o.now)}</span></div>
-    <div class="calc-row"><span class="k">Salida real de tu efectivo</span><span style="color:var(--down)">−${fmt(o.now)}</span></div>
+    ${fundRows(pl)}
+    <div class="calc-row"><span class="k">Salida real de tus recursos</span><span style="color:var(--down)">−${fmt(o.now)}</span></div>
     <div class="calc-row"><span class="k">Efecto en tu próximo corte SAV</span><span style="color:var(--down)">−${fmt(o.now)}</span></div>
   </div>`;
   card('ofr',o.t+' — adquirido',
-    `Se descontaron ${fmt(o.now)} del efectivo y se registraron como gasto del periodo. Este importe se restará de tus ingresos en el próximo corte de ahorro.`,
-    '−'+fmt(o.now),'Egreso registrado','var(--down)',o.n,calc);
+    `Se descontaron ${fmt(o.now)} de tus recursos y se registraron como gasto del periodo. Este importe se restará de tus ingresos en el próximo corte de ahorro.`,
+    '−'+fmt(o.now),'Egreso registrado','var(--down)',o.n+fundNote(pl,'una compra discrecional'),calc);
   updateDash();done();
 }
 function declineOffer(){
@@ -1354,14 +1399,14 @@ function doCAP(){
   G.curCap=c;
   const payback=Math.ceil(c.cost/c.gain);
   const remINC=Math.max(0,Math.round(5*(TOTAL_NODES-G.turn)/TOTAL_NODES));
-  const ok=G.cash>=c.cost;
+  const pl=fundPlan(c.cost); const ok=pl.ok; G.capPlan=pl;
   $('src').style.setProperty('--src-c','var(--acid)');
   $('src-title').textContent='Oferta de capacitaci\u00f3n \u2014 '+c.t;
-  $('src-desc').innerHTML=`${c.d}<br/><br/><b style="color:var(--txt)">${c.dur}</b> \u00b7 Costo \u00fanico de <b style="color:var(--down)">${fmt(c.cost)}</b> con cargo al disponible, a cambio de <b style="color:var(--acid)">+${fmt(c.gain)}</b> permanentes en cada nodo INC posterior. Se amortiza tras <b>${payback}</b> acreditaciones; quedan aproximadamente <b>${remINC}</b> por delante.`;
+  $('src-desc').innerHTML=`${c.d}<br/><br/><b style="color:var(--txt)">${c.dur}</b> \u00b7 Costo \u00fanico de <b style="color:var(--down)">${fmt(c.cost)}</b> con cargo a tus recursos, a cambio de <b style="color:var(--acid)">+${fmt(c.gain)}</b> permanentes en cada nodo INC posterior. Se amortiza tras <b>${payback}</b> acreditaciones; quedan aproximadamente <b>${remINC}</b> por delante.`;
   $('src-opts').innerHTML=`
     <button class="src-opt" onclick="takeCAP()" ${ok?'':'disabled style="opacity:.4;cursor:not-allowed"'}>
-      <span class="sc-l"><span class="sc-n">${ok?'Inscribirme al programa':'Disponible insuficiente'}</span>
-      <span class="sc-d">${ok?'Reduce el disponible hoy y eleva el ingreso de todos los nodos INC restantes':`Requiere ${fmt(c.cost)} y solo tienes ${fmt(G.cash)}`}</span></span>
+      <span class="sc-l"><span class="sc-n">${ok?'Inscribirme al programa':'Recursos insuficientes'}</span>
+      <span class="sc-d">${ok?'Se cubre con '+fundLabel(pl).replace(/<b[^>]*>/g,'').replace(/<\/b>/g,'')+' \u00b7 eleva el ingreso de todos los nodos INC restantes':`Requiere ${fmt(c.cost)} y entre disponible, apartados e inversi\u00f3n re\u00fanes ${fmt(G.cash+G.savings+G.invValue)}`}</span></span>
       <span class="sc-v" style="color:var(--down)">\u2212${fmt(c.cost)}</span></button>
     <button class="src-opt" onclick="skipCAP()">
       <span class="sc-l"><span class="sc-n">Declinar por ahora</span>
@@ -1371,20 +1416,23 @@ function doCAP(){
 }
 function takeCAP(){
   const c=G.curCap;
-  G.cash-=c.cost;G.pExpense+=c.cost;G.totExpense+=c.cost;
+  const pl=G.capPlan||fundPlan(c.cost);
+  applyFund(pl);
+  G.pExpense+=c.cost;G.totExpense+=c.cost;
   G.trainSpend+=c.cost;G.trainCount++;G.salaryBonus+=c.gain;
   $('src').classList.remove('show');
   const payback=Math.ceil(c.cost/c.gain);
   const remINC=Math.max(0,Math.round(5*(TOTAL_NODES-G.turn)/TOTAL_NODES));
   log(`<b>CAP</b> \u00b7 ${c.t} \u2212${fmt(c.cost)} \u00b7 sueldo +${fmt(c.gain)}`,'up');
   card('cap',c.t+' \u2014 inscripci\u00f3n confirmada',
-    `Se descontaron ${fmt(c.cost)} del disponible. A partir de ahora cada nodo INC acredita ${fmt(SALARY+G.salaryBonus)} en lugar de ${fmt(SALARY)}.`,
+    `Se descontaron ${fmt(c.cost)} de tus recursos. A partir de ahora cada nodo INC acredita ${fmt(SALARY+G.salaryBonus)} en lugar de ${fmt(SALARY)}.`,
     '+'+fmt(c.gain),'Incremento permanente por nodo INC','var(--acid)',
     remINC>=payback
       ? `<strong>Retorno dentro del horizonte.</strong> ${c.n} La decisi\u00f3n se recupera antes de que termine el ejercicio: ${payback} acreditaciones para amortizar frente a las ${remINC} que restan.`
       : `<strong>Retorno fuera del horizonte del ejercicio.</strong> ${c.n} Con ${remINC} acreditaciones restantes y ${payback} necesarias, esta capacitaci\u00f3n no se amortiza dentro de la simulaci\u00f3n. Fuera de ella s\u00ed lo har\u00eda: el horizonte laboral no son 25 nodos, son d\u00e9cadas. El error no es invertir tarde, sino evaluar una inversi\u00f3n formativa con el plazo equivocado.`,
     `<div class="calc">
       <div class="calc-row"><span class="k">Costo \u00fanico</span><span style="color:var(--down)">\u2212${fmt(c.cost)}</span></div>
+      ${fundRows(pl)}
       <div class="calc-row"><span class="k">Incremento por nodo INC</span><span style="color:var(--acid)">+${fmt(c.gain)}</span></div>
       <div class="calc-row"><span class="k">Nuevo ingreso por nodo INC</span><span style="color:var(--up)">${fmt(SALARY+G.salaryBonus)}</span></div>
     </div>`);
@@ -1477,8 +1525,9 @@ function nextTurn(){
   const net=netWorth();
   G.hist.push({n:G.turn,net,s:G.savings,i:G.invValue});
   updateDash();hideAll();
+  $('node-panel').classList.add('off');
   if(G.turn>=TOTAL_NODES){setTimeout(showResults,350);}
-  else{$('btn-roll').disabled=false;setNodePanel(SPACES[G.pos],G.pos);}
+  else{$('btn-roll').disabled=false;}
 }
 
 // ═══════ RESULTADOS ═══════
